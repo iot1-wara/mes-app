@@ -1,0 +1,23 @@
+[96msrc/data-collection/data-collection.service.ts[0m:[93m26[0m:[93m54[0m - [91merror[0m[90m TS2304: [0mCannot find name 'messageId'.
+
+[7m26[0m     const where: Record<string, any> = { machine_id: messageId };
+[7m  [0m [91m                                                     ~~~~~~~~~[0m
+[96msrc/data-collection/data-collection.service.ts[0m:[93m32[0m:[93m54[0m - [91merror[0m[90m TS2304: [0mCannot find name 'messageId'.
+
+[7m32[0m     const where: Record<string, any> = { machine_id: messageId, timestamp: Between(start, end) };
+[7m  [0m [91m                                                     ~~~~~~~~~[0m
+[96msrc/traces/traces.controller.ts[0m:[93m13[0m:[93m82[0m - [91merror[0m[90m TS2304: [0mCannot find name 'TraceCategoryType'.
+
+[7m13[0m   findAll(@Query('machine_id') machineId?: string, @Query('category') category?: TraceCategoryType) {
+[7m  [0m [91m                                                                                 ~~~~~~~~~~~~~~~~~[0m
+[96msrc/traces/traces.service.ts[0m:[93m37[0m:[93m56[0m - [91merror[0m[90m TS2304: [0mCannot find name 'messageId'.
+
+[7m37[0m     return this.tracesRepo.find({ where: { machine_id: messageId }, order: { collected_at: 'DESC' }, take });
+[7m  [0m [91m                                                       ~~~~~~~~~[0m
+[96msrc/traces/traces.service.ts[0m:[93m44[0m:[93m39[0m - [91merror[0m[90m TS2304: [0mCannot find name 'TraceCategoryType'.
+
+[7m44[0m   async getTracesByCategory(category: TraceCategoryType, take = 100): Promise<TraceEntity[]> {
+[7m  [0m [91m                                      ~~~~~~~~~~~~~~~~~[0m
+
+Found 5 error(s).
+

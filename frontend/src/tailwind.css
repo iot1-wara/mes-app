@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-brand-primary:  #f58b00;  /* Wara Orange als Primary */
+  --color-brand-magenta:  #e8147a;
+  --color-brand-orange:   #f58b00;
+  --color-brand-cyan:     #00b4d8;
+  --color-brand-lilac:    #9b72cf;
+
+  /* Neutrals — nie #000 oder #1a1a1a */
+  --color-neutral-50:     #fafafa;
+  --color-neutral-100:    #f4f4f5;
+  --color-neutral-200:    #e4e4e7;
+  --color-neutral-300:    #d4d4d8;
+  --color-neutral-400:    #a1a1aa;
+  --color-neutral-500:    #71717a;
+  --color-neutral-600:    #52525b;
+  --color-neutral-700:    #3f3f46;
+  --color-neutral-800:    #27272a;
+  --color-neutral-900:    #18181b;
+
+  /* Status */
+  --color-status-success:   #16a34a;
+  --color-status-success-bg: #f0fdf4;
+  --color-status-warning:   #ca8a04;
+  --color-status-warning-bg: #fefce8;
+  --color-status-error:     #dc2626;
+  --color-status-error-bg:   #fef2f2;
+  --color-status-info:      #2563eb;
+  --color-status-info-bg:    #eff6ff;
+   --color-accent-pink:      #fdf2f8;
+   --color-accent-lilac-bg:  #faf5ff;
+   --color-brand-primary-dark: #d97706;  /* Orange-Dunkel für hover */
+   --color-status-error-dark:  #b91c1c;
+}
+
+@utility shadow-card {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+@utility shadow-hover {
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+}
