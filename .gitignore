@@ -20,3 +20,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Windows batch scripts - not needed in repo
+*.bat
+*.ps1
