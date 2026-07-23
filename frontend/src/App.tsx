@@ -44,22 +44,26 @@ export default function App() {
     );
   }
 
+  console.log("[App] auth state changed, re-rendering main layout");
+
   return (
     <>
       <ToastContainer />
       <div className="h-screen w-screen flex overflow-hidden bg-neutral-50">
         <Sidebar />
-        <main className="flex-1 flex flex-col gap-6 p-6 relative">
-          <Routes>
-            <Route path="/auth/*" element={<Navigate to="/" />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="machines/*" element={<MachinesPage />} />
-            <Route path="orders/*" element={<OrdersPage />} />
-            <Route path="alarms/*" element={<AlarmsPage />} />
-            <Route path="traces/*" element={<TracesPage />} />
-            <Route path="edge/*" element={<EdgePage />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+        <main className="flex-1 flex flex-col gap-6 p-6 overflow-y-auto relative">
+          {authState && (
+            <Routes>
+              <Route path="/auth/*" element={<Navigate to="/" />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="machines/*" element={<MachinesPage />} />
+              <Route path="orders/*" element={<OrdersPage />} />
+              <Route path="alarms/*" element={<AlarmsPage />} />
+              <Route path="traces/*" element={<TracesPage />} />
+              <Route path="edge/*" element={<EdgePage />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          )}
         </main>
       </div>
     </>

@@ -48,10 +48,10 @@ export default function OrdersPage() {
     if (!order) return;
     
     await api.post("/orders/carriers", {
+      order_id: orderId,
       name: `WERKST-${orderId.substring(0,6)}`,
       current_station_id: order.machine_id || "",
       next_resource_id: order.machine_id || "",
-      order_id: orderId,
       iStepNo: 0,
       nextStepNo: 1,
     });
@@ -90,7 +90,7 @@ export default function OrdersPage() {
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
   useEffect(() => {
-    api.get("/orders/carriers").then((d) => { if (Array.isArray(d)) setCarriers(d); }).catch(() => {});
+    api.get("/orders/carriers/list").then((d) => { if (Array.isArray(d)) setCarriers(d); }).catch(() => {});
   }, []);
 
   const statusColors: Record<string, string> = {

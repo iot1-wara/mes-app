@@ -36,7 +36,7 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       api.get("/machines").then((d) => d && Array.isArray(d) ? setMachines(d) : null).catch(() => {}),
-      api.get("/orders/carriers").then((d) => d && Array.isArray(d) ? setCarriers(d) : null).catch(() => {}),
+      api.get("/orders/carriers/list").then((d) => d && Array.isArray(d) ? setCarriers(d) : null).catch(() => {}),
       api.get("/orders?status=in_progress").then((d) => d && Array.isArray(d) ? setOrders(d) : null).catch(() => {}),
       api.get("/alarms/stats/active-count").then((s) => s ? setActiveAlarms(new Array(s.count)) : null).catch(() => {}),
     ]);
@@ -135,25 +135,9 @@ export default function DashboardPage() {
           <h2 className="text-lg font-bold text-neutral-900 mb-4">Produktionslinie</h2>
           <div className="flex items-center gap-8 overflow-x-auto pb-4">
             {lineStations.map((station, i) => (
-              <div key={station.id} className="flex flex-col items-center min-w-[120px] space-y-3">
-                {/* Carrier icon */}
-                <div className={`w-16 h-16 rounded-lg flex items-center justify-center shadow-sm transition-all duration-200 ${carrierStatusColors[station.carrier?.status || "idle"]}`}>
-                  <span className="text-xs font-mono leading-none">{station.carrier ? (station.carrier.name || "C").substring(0, 3).toUpperCase() : "—"}</span>
-                </div>
-
-                {/* Handshake flags */}
-                {station.carrier?.handshake && (
-                  <div className="flex gap-1">
-                    {Object.entries(station.carrier.handshake)
-                      .filter(([k]) => ["xStart", "xQryBusy", "xAck"].includes(k))
-                      .map(([k, v]) => (
-                        <span key={k} title={`${k}: ${String(v)}`} className={`w-2 h-2 rounded-full ${(v as boolean) ? "bg-status-success" : "bg-neutral-300"}`} />
-                      ))}
-                  </div>
-                )}
-
+              <div key={station.id} className="flex items-center min-w-[120px]">
                 {/* Station block */}
-                <div className="relative w-28">
+                <div className="w-28 flex flex-col items-center space-y-3">
                   <div className={`rounded-lg border p-3 text-center transition-all duration-200 cursor-pointer hover:shadow-md ${station.status === "online" ? "border-neutral-200 bg-white" : "bg-neutral-50 border-dashed border-neutral-300"}`}>
                     <div className="text-sm font-semibold text-neutral-800">{station.name}</div>
                     <div className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs ${machineStatusBadge(station.status)}`}>
@@ -161,21 +145,37 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Connection line */}
-                  {i < lineStations.length - 1 && (
-                    <div className="absolute top-8 -right-6 w-8 h-0.5 bg-neutral-200" />
+                  {/* Status dot */}
+                  <span className={`w-3 h-3 rounded-full ring-2 ring-white ${statusColors[station.status === "online" ? (station.quality === "good" ? "online" : "error") : "offline"]}`} />
+
+                  {/* Last value badge */}
+                  {station.lastValue != null && station.lastValue !== undefined && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${statusColors[station.quality === "good" ? "online" : "error"]}`}>
+                      {station.lastValue.toFixed(1)}
+                    </span>
                   )}
+
+                  {/* Carrier icon */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center shadow-sm transition-all duration-200 ${carrierStatusColors[station.carrier?.status || "idle"]}`}>
+                      <span className="text-xs font-mono leading-none">{station.carrier ? (station.carrier.name || "C").substring(0, 3).toUpperCase() : "—"}</span>
+                    </div>
+
+                    {/* Handshake flags */}
+                    {station.carrier?.handshake && (
+                      <div className="flex gap-1">
+                        {Object.entries(station.carrier.handshake)
+                          .filter(([k]) => ["xStart", "xQryBusy", "xAck"].includes(k))
+                          .map(([k, v]) => (
+                            <span key={k} title={`${k}: ${String(v)}`} className={`w-2 h-2 rounded-full ${(v as boolean) ? "bg-status-success" : "bg-neutral-300"}`} />
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Last value badge */}
-                {station.lastValue != null && station.lastValue !== undefined && (
-                  <span className={`text-xs px-2 py-1 rounded-full ${statusColors[station.quality === "good" ? "online" : "error"]}`}>
-                    {station.lastValue.toFixed(1)}
-                  </span>
-                )}
-
-                {/* Status dot */}
-                <span className={`w-3 h-3 rounded-full ring-2 ring-white ${statusColors[station.status === "online" ? (station.quality === "good" ? "online" : "error") : "offline"]}`} />
+                {/* Connection line */}
+                
               </div>
             ))}
           </div>
@@ -185,7 +185,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-card border border-neutral-200 p-6">
           <h2 className="text-lg font-bold text-neutral-900 mb-4">Durchsatz Verlauf ({timeRange})</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData.length > 0 ? trendData : null}>
+            <LineChart data={trendData.length > 0 ? trendData : []}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />

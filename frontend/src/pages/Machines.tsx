@@ -7,6 +7,7 @@ export default function MachinesPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ id: null, name: "", type: "CNC", location: "" });
   const [search, setSearch] = useState("");
+  const [csvMenuOpen, setCsvMenuOpen] = useState(false);
 
   useEffect(() => {
     api.get("/machines").then((d) => {
@@ -92,19 +93,21 @@ export default function MachinesPage() {
             + Neue Station
           </button>
           <div className="relative inline-block">
-            <button className="px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50">
+            <button onClick={() => setCsvMenuOpen(!csvMenuOpen)} className="px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50">
               CSV Import ↓
             </button>
-            <div className="absolute right-0 mt-1 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
-              <button onClick={downloadTemplate} className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-t-lg">
-                📄 Template herunterladen
-              </button>
-              <div className="border-t border-neutral-200" />
-              <label className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-b-lg cursor-pointer">
-                📁 CSV hochladen
-                <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
-              </label>
-            </div>
+            {csvMenuOpen && (
+              <div onClick={(e) => e.stopPropagation()} onBlur={() => setCsvMenuOpen(false)} className="absolute right-0 mt-1 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
+                <button onClick={downloadTemplate} className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-t-lg">
+                  📄 Template herunterladen
+                </button>
+                <div className="border-t border-neutral-200" />
+                <label className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-b-lg cursor-pointer">
+                  📁 CSV hochladen
+                  <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
