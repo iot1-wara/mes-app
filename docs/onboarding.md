@@ -11,7 +11,7 @@
 ## Schnellstart (5 Minuten)
 
 ```bash
-# 1. Datenbank hochfahren
+# 1. TimescaleDB-Container hochfahren
 docker-compose up -d postgres
 
 # Warten bis DB bereit ist (ca. 10s)
@@ -77,7 +77,7 @@ mes-app/
 │   ├── machines/           # Maschinen-Modul
 │   ├── orders/             # Aufträge-Modul
 │   ├── traces/             # Trace-Daten-Modul
-│   ├── data-collection/    # Zeitreihendaten
+│   ├── data-collection/    # Zeitreihendaten (TimescaleDB Hypertables)
 │   ├── opcua/              # OPC UA + MQTT Gateway
 │   └── main.ts             # Entry Point
 ├── frontend/               # React Frontend (Vite)

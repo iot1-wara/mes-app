@@ -44,7 +44,7 @@ npx pm2 start ecosystem.config.js --env production
 # docker-compose.yml
 services:
   postgres:
-    image: postgres:16-alpine
+    image: timescale/timescaledb:latest-pg16
     container_name: mes_db
     environment:
       POSTGRES_USER: mes_admin
@@ -96,8 +96,20 @@ server {
 | `MQTT_BROKER_URL` | MQTT Broker | `mqtt://internal.corp:1883` |
 | `OPCUA_ENDPOINT_URL` | OPC UA Server | `opc.tcp://plc.internal:4840` |
 
-## Health-Check Endpoint
+## Health-Check & TimescaleDB Monitoring
 
 ```bash
-curl http://localhost:3000/api/edge/health
+curl http://localhost:3000/api/edge/health           # Health check (incl. DB component)
+curl http://localhost:3000/api/data-collection/benchmark    # Write throughput benchmark
+curl http://localhost:3000/api/data-collection/hypertable-info  # Compression/chunk status
 ```
+
+## TimescaleDB Features
+
+| Feature | Konfiguration |
+|---------|-------------|
+| Hypertable | `data_points` mit daily chunks |
+| Kompression | Auto nach 7 Tagen, segmentiert nach machine_id/node_id/quality |
+| Retention | Raw-Daten gelöscht nach 90 Tagen |
+| Continuous Aggregates | Stündliche & Dashboard-Rollups mit automatischem Refresh |
+

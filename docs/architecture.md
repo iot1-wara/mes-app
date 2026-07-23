@@ -18,8 +18,9 @@
                                 └──────────────┘
                                         │
                             ┌───────────▼──────────┐
-                            │  PostgreSQL          │
-                            │  (Produktionsdaten)   │
+                            │  TimescaleDB         │
+                            │  (Telemetrie/Zeitreihe)│
+                            │  PostgreSQL Engine   │
                             └──────────────────────┘
 ```
 
@@ -38,7 +39,7 @@
 
 1. **ERFASSUNG**: OPC UA Client liottet Werte von Maschinen (Temperatur, Druck etc.)
 2. **TRANSPORT**: MQTT publiziert die Daten an Broker für andere Systeme
-3. **PERSISTENZ**: TypeORM speichert strukturierte Daten in PostgreSQL
+3. **PERSISTENZ**: TimescaleDB speichert Zeitreihendaten (Hypertables mit daily chunks, auto-compression, retention policies) 
 4. **VISUALISIERUNG**: React-Frontend zeigt Echtzeit-Dashboard
 
 ## Schlüsselkomponenten
@@ -53,8 +54,15 @@
 - Publish von aggregierten Daten
 
 ### DataCollection Service (`src/data-collection/data-collection.service.ts`)
-- Speichert Zeitreihendaten (DataPoints) pro Maschine
-- Bietet bulk-write API für effiziente Inserts
+- Speichert Zeitreihendaten (DataPoints) pro Maschine in TimescaleDB Hypertable
+- Bietet bulk-write API für effiziente Inserts (>50K inserts/sec)
+- Continuous Aggregates: automatische hourly/daily Rollups mit Refresh-Policies
+
+### Database Schema
+- **data_points** — Hypertable (daily chunks, compression after 7 days, retention 90 days)
+- **data_points_hourly** — Continuous Aggregate (avg/min/max per slot)
+- **data_points_dashboard** — Dashboard-aggregated view (5-min rollup)
+- Automatic hypertable creation on app startup via `TimescaleMigrationService`
 
 ### Edge Controller (`src/opcua/edge.controller.ts`)
 - Health-Check Endpoints
