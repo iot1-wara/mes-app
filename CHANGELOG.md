@@ -17,27 +17,26 @@ Alle bedeutenden Änderungen an diesem Projekt werden in diesem Dokument dokumen
 - TS type errors: `el.dataset.id` needs string, Orders quantity/priority need Number() coercion
 - Edge.tsx card rendering: fixed numeric value computations typed as strings
 
-## [1.1.0] — 2026-07-23
+## [1.3.0] — 2026-07-23 (Phase 2 + Phase 3 Complete)
 
 ### Added
-- **Orders-Module**: Vollständige CRUD-Verwaltung für Produktionsauftraege (create/edit/delete/status transitions)
-- **Frontend Login/Register-Screen**: Auth-gesteuerter Zugang mit JWT-Persistenz in localStorage
-- **WebSocket-Gateway** (`/api/edge/ws`): Echtzeit-Datenuebertragung via Socket.IO mit Heartbeat und Event-Bus
-- **Toast-Notification-System**: Auto-Responses bei HTTP-Fehlern, Auth-Ablauf-Warning, Bulk-Erfolgsmeldungen
-- **Alarms Bulk Operations**: Checkbox-Multi-Select + Bulk-Acknowledge auf Alarmsite
-- **Traces Multi-Filter**: Kombinierte Filterung nach Kategorie UND Maschine
+- **Machines CSV Import**: Bulk import + template download (Task 2.5)
+- **Health Check Endpoint**: `/health` with DB component health status
+- **Graceful Shutdown**: SIGINT/SIGTERM handlers in app bootstrap (Task 6.4)
+- **Security Headers**: Helmet.js integration in main.ts
+- **Phase 3 — Time-Series Data Architecture (TimescaleDB)**:
+  - Migration von PostgreSQL → TimescaleDB (`timescale/timescaledb:latest-pg16`)
+  - Hypertable creation with daily chunks + automatic compression after 7 days
+  - Retention policy: automatic raw data deletion after 90 days
+  - Continuous Aggregates: hourly rollup (avg/min/max/point_count) + dashboard 5-min aggregate
+  - Automatic refresh policies for Continuous Aggregates (1h and 30min intervals)
+  - Write throughput benchmark endpoint (`GET /data-collection/benchmark`)
+  - Hypertable metadata endpoint (`GET /data-collection/hypertable-info`)
 
 ### Changed
-- **Full frontend migration to TypeScript**: All 15 JS/JSX files converted to TS/TSX (Vite resolved import extensions automatically)
-- **Frontend API layer**: Replaced all raw `fetch()` calls across every page with authenticated client methods from `client.ts` — now using `api.get/del/patch/post`. All pages share a single auth pattern. Token handling fixed (no more 401 errors after login).
-- **Login/Register validation**: Added @IsNotEmpty() decorators to DTO fields so ValidationPipe stops stripping them silently. Switched from array body (frontend) to valid object body. Backend login flow now works as expected.
-- **AuthService**: Replaced setJwtService setter injection with direct constructor-injected jwtService. Prevents runtime errors where jwtService was undefined at login time.
-- **Users manually inserted**: bootstrap_admin_user and bootstrap_operator_user as real PostgreSQL users with bcrypt hashed passwords. Bootstrap logic is now only for initial setup.
-
-### Fixed
-- TypeScript-Build-Fehler in `data-collection.service.ts` (parameter naming: messageId → machineId)
-- AuthService Dependency Injection Error (missing ConfigService import in AuthModule)
-- MQTT client null checks bei disconnected state (TypeScript strict mode compliant)
+- **Docker Compose**: PostgreSQL → TimescaleDB image
+- **DataPointEntity**: Added composite indexes for hypertable queries
+- **App startup**: Automatic TimescaleDB extension detection + hypertable creation on first boot
 
 ---
 
