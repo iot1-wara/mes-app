@@ -8,6 +8,8 @@ import { TracesModule } from './traces/traces.module';
 import { DataCollectionModule } from './data-collection/data-collection.module';
 import { EdgeGatewayModule } from './opcua/edge-gateway.module';
 import { OpcUaModule } from './opcua/opcua.module';
+import { AuthModule } from './auth/auth.module';
+import { UserEntity } from './auth/user.entity';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { OpcUaModule } from './opcua/opcua.module';
       synchronize: process.env.NODE_ENV !== 'production',
       autoLoadEntities: true,
     }),
+    AuthModule,
     AlarmsModule,
     MachinesModule,
     OrdersModule,
