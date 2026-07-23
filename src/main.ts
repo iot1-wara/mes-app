@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule, TimescaleMigrationService } from './app.module';
 import * as path from 'path';
 import * as express from 'express';
 import { ValidationPipe, UnauthorizedException, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsAdapter } from '@nestjs/platform-ws';
+import * as helmet from 'helmet';
 
 class AllAuthGuard implements CanActivate {
   private jwtService?: JwtService;
@@ -47,6 +48,9 @@ class AllAuthGuard implements CanActivate {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // helmet security headers
+  app.use(helmet());
+  
   // WebSocket adapter
   app.useWebSocketAdapter(new WsAdapter(app));
   
@@ -72,6 +76,10 @@ async function bootstrap() {
   const authGuard = new AllAuthGuard();
   authGuard.setJwtService(jwtService);
   app.useGlobalGuards(authGuard);
+  
+  // Run TimescaleDB migration in background — don't block startup
+  const tms = app.get(TimescaleMigrationService);
+  tms.onModuleInit().catch((err) => console.error('[TimescaleDB Migration Error]', err));
 
   const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
   console.log('Frontend path:', frontendDistPath);
@@ -88,6 +96,19 @@ async function bootstrap() {
       }
     }
     next();
+  });
+
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    console.log('\n[Graceful Shutdown] SIGINT received — shutting down...');
+    await app.close();
+    process.exit(0);
+  });
+  
+  process.on('SIGTERM', async () => {
+    console.log('\n[Graceful Shutdown] SIGTERM received — shutting down...');
+    await app.close();
+    process.exit(0);
   });
 
   const port = process.env.PORT || 3000;

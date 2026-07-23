@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import * as Papa from 'papaparse';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MachineEntity, MachineStatusEnum } from './machine.entity';
@@ -57,5 +58,50 @@ export class MachinesService {
 
   async findByLocation(location: string): Promise<MachineEntity[]> {
     return this.machinesRepo.find({ where: { location }, order: { name: 'ASC' } });
+  }
+
+  async importCsv(buffer: Buffer): Promise<{ imported: number; errors: string[] }> {
+    const csv = buffer.toString('utf-8');
+    const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+    if (parsed.errors.length) throw new Error(parsed.errors[0].message);
+
+    const headers = Object.keys(parsed.data[0] || {});
+    const mandatory = ['name'];
+    const missing = mandatory.filter(h => !headers.includes(h));
+    if (missing.length) throw new Error(`CSV required columns: ${missing.join(', ')}`);
+
+    const importStatuses: MachineStatusEnum[] = ['online','offline','maintenance','error','idle'];
+    let imported = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < parsed.data.length; i++) {
+      const row = parsed.data[i];
+      try {
+        const machine = this.machinesRepo.create({
+          name: String(row.name || '').trim(),
+          status: importStatuses.includes((row.status || 'online').toLowerCase() as any)
+            ? (row.status || 'online').toLowerCase() as MachineStatusEnum
+            : 'offline',
+          type: row.type || '',
+          location: row.location || '',
+          model: row.model || '',
+          serial_number: row.serial_number || '',
+          telemetry: {},
+        });
+        await this.machinesRepo.save(machine);
+        imported++;
+      } catch (err: any) {
+        errors.push(`Row ${i + 1}: ${err.message}`);
+      }
+    }
+    return { imported, errors };
+  }
+
+  getCsvTemplate(): string {
+    return [
+      'name,status,type,location,model,serial_number',
+      'Presser A,online,hydraulic,CNC-Werkstatt,BR-3000,SN-20260001',
+      'Laser Cut B,maintenance,laser,CNC-Werkstatt,LC-500X,SN-20260002',
+    ].join('\n');
   }
 }

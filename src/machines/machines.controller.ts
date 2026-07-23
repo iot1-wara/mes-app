@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseInterceptors, UploadedFile, Req, Res, UseGuards } from '@nestjs/common';
 import { MachinesService } from './machines.service';
 import type { CreateMachineDto, UpdateMachineDto } from './machine.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('machines')
 export class MachinesController {
@@ -29,4 +30,19 @@ export class MachinesController {
 
   @Get('location/:location')
   findByLocation(@Param('location') location: string) { return this.machinesService.findByLocation(location); }
+
+  @Post('import/csv')
+  @UseInterceptors(FileInterceptor('file'))
+  async importCsv(@UploadedFile() file: Express.Multer.File, @Res() res: any) {
+    const result = await this.machinesService.importCsv(file.buffer);
+    return res.json(result);
+  }
+
+  @Get('export/csv')
+  downloadTemplate(@Res() res: any) {
+    const csv = this.machinesService.getCsvTemplate();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=machines-template.csv');
+    return res.send(csv);
+  }
 }

@@ -56,13 +56,17 @@ type FetchConfig = Record<string, any>;
 
 async function request(endpoint: string, options: FetchConfig = {}): Promise<any> {
   const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+  const headers: Record<string, string> = {
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...options.headers
+  };
+  // FormData → let browser set Content-Type with boundary
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
   const config: FetchConfig = {
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...options.headers
-    },
-    ...options
+    headers,
+    ...options,
   };
   if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
     config.body = JSON.stringify(config.body);
@@ -96,41 +100,44 @@ async function request(endpoint: string, options: FetchConfig = {}): Promise<any
   return res.json();
 }
 
-async function requestText(endpoint: string, options: FetchConfig = {}): Promise<string> {
-  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
-  const config: FetchConfig = {
-    headers: {
-      "Content-Type": "application/json",
+  async function requestText(endpoint: string, options: FetchConfig = {}): Promise<string> {
+    const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+    const headers: Record<string, string> = {
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...options.headers
-    },
-    ...options
-  };
-  if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
-    config.body = JSON.stringify(config.body);
-  }
+    };
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+    const config: FetchConfig = {
+      headers,
+      ...options,
+    };
+    if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
+      config.body = JSON.stringify(config.body);
+    }
 
-  let res: Response;
-  try {
-    res = await fetch(url, config);
-  } catch (err: any) {
-    const msg = err.message || "Network error";
-    showToast(`Verbindungsfehler: ${msg}`, "error");
-    throw new Error(msg);
-  }
+    let res: Response;
+    try {
+      res = await fetch(url, config);
+    } catch (err: any) {
+      const msg = err.message || "Network error";
+      showToast(`Verbindungsfehler: ${msg}`, "error");
+      throw new Error(msg);
+    }
 
-  if (!res.ok) {
-    let body: any;
-    try { body = await res.json(); } catch {}
-    const msg = body?.message || `HTTP ${res.status}`;
-    showToast(msg, "error");
-    const err = new Error(msg) as Error & { status: number };
-    err.status = res.status;
-    throw err;
-  }
+    if (!res.ok) {
+      let body: any;
+      try { body = await res.json(); } catch {}
+      const msg = body?.message || `HTTP ${res.status}`;
+      showToast(msg, "error");
+      const err = new Error(msg) as Error & { status: number };
+      err.status = res.status;
+      throw err;
+    }
 
-  return res.text();
-}
+    return res.text();
+  }
 
 export const api = {
   get: (endpoint: string, body?: any, extra?: any) => request(endpoint, { method: "GET", body, ...extra }),

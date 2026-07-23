@@ -72,12 +72,9 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 2.2 | Alarms: acknowledge inline, bulk operations, export | Medium | 1 day | ✅ done |
 | 2.3 | Traces: add filter by key_data_point + value range search | Medium | 1 day | ✅ done |
 | 2.4 | Global API error handling in React (interceptor + toast notifications) | High | 2–3 hrs | ✅ done |
+| 2.5 | Machines: bulk import (CSV/Excel), template download | Low | 1 day | ✅ done |
 
-**Phase 2 completion:** 4/5 (80%) — Task 2.5 pending.
-
----
-
-### Phase 3 — Time-Series Data Architecture _(Weeks 9–12)_
+**Phase 2 completion: 5/5 (100%) — All tasks done!**
 
 ---
 
@@ -87,11 +84,11 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 3.1 | Replace `postgres:16` with `timescale/timescaledb:latest-pg16` in `docker-compose.yml` | Critical | 30 min | ⬜ pending |
-| 3.2 | Create hypertable for `data_points`; migrate existing data | Critical | 2–3 hrs | ⬜ pending |
-| 3.3 | Update TypeScript DTOs and DataPointEntity to use Timescale extensions | High | 1 day | ⬜ pending |
+| 3.1 | Replace `postgres:16` with `timescale/timescaledb:latest-pg16` in `docker-compose.yml` | Critical | 30 min | ✅ done |
+| 3.2 | Create hypertable for `data_points`; migrate existing data | Critical | 2–3 hrs | ✅ done |
+| 3.3 | Update TypeScript DTOs and DataPointEntity to use Timescale extensions | High | 1 day | ✅ done (indexes added, migration service created) |
 | 3.4 | Implement retention policies (keep raw data 90 days, roll up to 1-min averages for 1 year) | High | 2 days | ⬜ pending |
-| 3.5 | Add chunking configuration (daily chunks with automatic compression) | Medium | 1 day | ⬜ pending |
+| 3.5 | Add chunking configuration (daily chunks with automatic compression) | Medium | 1 day | ✅ done (via migration service) |
 | 3.6 | Benchmarks: measure write throughput before/after migration | High | 2–3 hrs | ⬜ pending |
 | 3.7 | Update all documentation referencing DB schema (architecture.md, deploy.md, onboarding.md) | Medium | 1 day | ⬜ pending |
 

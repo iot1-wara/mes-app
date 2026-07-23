@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import StatCard from "../components/StatCard";
-import { api } from "../api/client";
+import { api, showToast } from "../api/client";
 
 export default function MachinesPage() {
-  const [machines, setMachines] = useState([]);
+  const [machines, setMachines] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ id: null, name: "", type: "CNC", location: "" });
   const [search, setSearch] = useState("");
@@ -44,8 +44,32 @@ export default function MachinesPage() {
     }).catch(() => {});
   }
 
-  const onlineCount = machines.filter((m) => ["online", "running"].includes(m.status)).length;
+  function downloadTemplate() {
+    api.getText("/machines/export/csv").then((csv) => {
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "machines-template.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
 
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    api.post("/machines/import/csv", formData, { headers: {} }).then((res) => {
+      const imported = res?.imported || 0;
+      showToast(`${imported} Maschinen importiert${res?.errors?.length ? `, ${res.errors.length} Fehler` : ''}`, "success");
+      refreshList();
+    }).catch((err) => showToast(err.message, "error"));
+    e.target.value = "";
+  }
+
+  const onlineCount = machines.filter((m) => ["online", "running"].includes(m.status)).length;
   return (
     <div className="min-h-screen bg-neutral-50">
       <main className="p-6 space-y-6">
@@ -63,10 +87,25 @@ export default function MachinesPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex justify-end">
+        <div className="flex gap-2">
           <button onClick={() => setShowModal(true)} className="bg-brand-primary text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--color-brand-primary-dark)] transition-colors">
             + Neue Station
           </button>
+          <div className="relative inline-block">
+            <button className="px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50">
+              CSV Import ↓
+            </button>
+            <div className="absolute right-0 mt-1 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
+              <button onClick={downloadTemplate} className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-t-lg">
+                📄 Template herunterladen
+              </button>
+              <div className="border-t border-neutral-200" />
+              <label className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 rounded-b-lg cursor-pointer">
+                📁 CSV hochladen
+                <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Suche */}

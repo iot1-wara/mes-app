@@ -36,8 +36,11 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
+    "helmet": "^8.3.0",
     "mqtt": "^5.15.2",
+    "multer": "^2.2.0",
     "node-opcua": "^2.175.2",
+    "papaparse": "^5.5.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.22.0",
@@ -46,7 +49,8 @@
     "socket.io": "^4.8.3",
     "typeorm": "^1.1.0",
     "uuid": "^14.0.1",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -56,6 +60,7 @@
     "@nestjs/testing": "^11.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
