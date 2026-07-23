@@ -100,15 +100,14 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 4.1 | Order workflow states: `draft` → `released` → `in_progress` → `completed` / `cancelled` + SPS-Flags `udiONo`/`uiOPos`/`uiOpNo` im State-Übergang | Critical | 2–3 days | ⬜ pending |
-| 4.2 | Production step tracking: Carrier Entity + dbProcessData-Routing (`iStepNo` → `stepNo`, `iResourceID` → `nextResourceId`) | Critical | 2 days | ⬜ pending |
-| 4.3 | Material consumption tracking (link materials to orders) | Medium | 1–2 days | ⬜ pending |
-| 4.4 | **Dispatcher-Service**: OPC UA Subscription auf `xStart` pro Station + stMES-Handshake logik (Lesen/Antworten via write-back) | Critical | 3–5 days | ⬜ pending |
-| 4.5 | Carrier-CRUD REST API erstellen (create/read/update/delete Carriers mit dbProcessData-Feldern) | High | 1 day | ⬜ pending |
-| 4.6 | Error handling & downtime logging per machine + Mapping auf `xErrL0`/`xErrL1`/`xErrL2` Bits | High | 1–2 days | ⬜ pending |
-| 4.5 | Error handling & downtime logging per machine | High | 1–2 days | ⬜ pending |
+| 4.1 | Order workflow states: `pending` → `released` → `in_progress` → `completed` / `cancelled` + SPS-Flags | Critical | 2–3 days | ✅ done (order.entity.ts + orders.service.ts + full frontend UI) |
+| 4.2 | Production step tracking: Carrier Entity + dbProcessData routing | Critical | 2 days | ✅ done (carrier.entity.ts, carrier.service.ts with iStepNo/next_resource_id) |
+| 4.3 | Material consumption tracking (link materials to orders) | Medium | 1–2 days | ✅ done (material.entity.ts, materials.service.ts + APIs) |
+| 4.4 | **Dispatcher-Service**: OPC UA subscription on `xStart` + stMES handshake logic | Critical | 3–5 days | ✅ done (dispatcher.service.ts with xStart/xQryBusy/write-back handshake) |
+| 4.5a | Carrier CRUD REST API | High | 1 day | ✅ done (/orders/carriers/* endpoints, carrier.controller → orders.controller) |
+| 4.6 | Error handling & downtime logging per machine (xErrL0/L1/L2 mapping + Pareto stats) | High | 1–2 days | ✅ done (machine-error.entity.ts, machine-errors.service.ts) |
 
-**Exit Criteria:** Full order lifecycle flow with state transitions, material tracking (via Carrier parameters), SPS handshake via OPC UA subscriptions, and carrier routing.
+**Phase 4 completion: 6/6 — All tasks done!** 🎉
 
 ---
 
