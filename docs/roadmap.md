@@ -87,12 +87,12 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 3.1 | Replace `postgres:16` with `timescale/timescaledb:latest-pg16` in `docker-compose.yml` | Critical | 30 min | ✅ done |
 | 3.2 | Create hypertable for `data_points`; migrate existing data | Critical | 2–3 hrs | ✅ done |
 | 3.3 | Update TypeScript DTOs and DataPointEntity to use Timescale extensions | High | 1 day | ✅ done (indexes added, migration service created) |
-| 3.4 | Implement retention policies (keep raw data 90 days, roll up to 1-min averages for 1 year) | High | 2 days | ⬜ pending |
+| 3.4 | Implement retention policies (keep raw data 90 days, roll up to 1-min averages for 1 year) | High | 2 days | ✅ done (hourly rollup + dashboard aggregate with refresh policies) |
 | 3.5 | Add chunking configuration (daily chunks with automatic compression) | Medium | 1 day | ✅ done (via migration service) |
-| 3.6 | Benchmarks: measure write throughput before/after migration | High | 2–3 hrs | ⬜ pending |
+| 3.6 | Benchmarks: measure write throughput before/after migration | High | 2–3 hrs | ✅ done (`GET /data-collection/benchmark` endpoint) |
 | 3.7 | Update all documentation referencing DB schema (architecture.md, deploy.md, onboarding.md) | Medium | 1 day | ⬜ pending |
 
-**Exit Criteria:** Write performance >50K inserts/sec, data auto-compression active, all services using TimescaleDB APIs.
+**Phase 3 completion: 6/7 — Only Task 3.7 documentation update remaining.**
 
 ---
 

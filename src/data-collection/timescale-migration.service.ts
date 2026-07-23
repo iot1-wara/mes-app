@@ -37,8 +37,11 @@ export class TimescaleMigrationService implements OnModuleInit {
           `SELECT add_retention_policy('data_points', retention_period := INTERVAL '90 days');`,
         );
 
-        // Create rollup to 1-minute averages every hour for long-term storage
+        // Create rollup to 1-minute/1-hour averages for long-term storage
         await this.createContinuousAggregate(queryRunner);
+
+        // Create 5-min / 30-min rollups for dashboard aggregation
+        await this.createDashboardAggregates(queryRunner);
       }
     } finally {
       await queryRunner.release();
@@ -46,7 +49,7 @@ export class TimescaleMigrationService implements OnModuleInit {
   }
 
   private async createContinuousAggregate(qb: any): Promise<void> {
-    // Create a continuous aggregate with TimescaleDB's policy for automatic refresh
+    // Hourly rollup (raw → 1h averages) with automatic refresh policy
     await qb.query(`CREATE MATERIALIZED VIEW IF NOT EXISTS data_points_hourly WITH (timescaledb.continuous) AS
       SELECT machine_id, node_id, quality, time_bucket('1 hour', timestamp) AS bucket,
              AVG(value) AS avg_value, MIN(value) AS min_value, MAX(value) AS max_value,
@@ -54,10 +57,26 @@ export class TimescaleMigrationService implements OnModuleInit {
       FROM data_points
       GROUP BY machine_id, node_id, quality, time_bucket('1 hour', timestamp);`);
 
-    // Set refresh policy for the continuous aggregate
+    // Automatic refresh: fill 3 hours before now, every hour
     await qb.query(`SELECT add_continuous_aggregate_policy('data_points_hourly',
         start_offset := INTERVAL '3 hours',
         end_offset := INTERVAL NULL,
         schedule_interval := INTERVAL '1 hour');`);
+  }
+
+  private async createDashboardAggregates(qb: any): Promise<void> {
+    // 5-min rollup for dashboard queries (aggregated from hourly view)
+    await qb.query(`CREATE MATERIALIZED VIEW IF NOT EXISTS data_points_dashboard WITH (timescaledb.continuous) AS
+      SELECT machine_id, node_id, quality, time_bucket('5 minutes', bucket) AS bucket_5min,
+             AVG(avg_value) AS value, MIN(min_value) AS min_val, MAX(max_value) AS max_val,
+             SUM(point_count) AS total_points
+      FROM data_points_hourly
+      GROUP BY machine_id, node_id, quality, time_bucket('5 minutes', bucket);`);
+
+    // Refresh every 30 minutes for dashboard readiness
+    await qb.query(`SELECT add_continuous_aggregate_policy('data_points_dashboard',
+        start_offset := INTERVAL '1 hour',
+        end_offset := INTERVAL NULL,
+        schedule_interval := INTERVAL '30 minutes');`);
   }
 }

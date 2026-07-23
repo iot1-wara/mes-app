@@ -1,10 +1,14 @@
 import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { DataCollectionService } from './data-collection.service';
 import type { CreateDataPointDto } from './data-point.dto';
+import { TimescaleBenchmarkService } from './timescale-benchmark.service';
 
 @Controller('data-collection')
 export class DataCollectionController {
-  constructor(private readonly dataCollectionService: DataCollectionService) {}
+  constructor(
+    private readonly dataCollectionService: DataCollectionService,
+    private readonly benchmarkService: TimescaleBenchmarkService,
+  ) {}
 
   @Post()
   create(@Body() dto: CreateDataPointDto) { return this.dataCollectionService.create(dto); }
@@ -21,4 +25,15 @@ export class DataCollectionController {
 
   @Post('bulk')
   bulkCreate(@Body() points: CreateDataPointDto[]) { return this.dataCollectionService.bulkCreate(points); }
+
+  @Get('benchmark')
+  async runBenchmark() {
+    return this.benchmarkService.runBenchmarks();
+  }
+
+  @Get('hypertable-info')
+  async hypertableInfo() {
+    const info = await this.benchmarkService.getHypertableMetadata();
+    return info;
+  }
 }
