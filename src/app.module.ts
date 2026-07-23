@@ -9,6 +9,7 @@ import { DataCollectionModule } from './data-collection/data-collection.module';
 import { EdgeGatewayModule } from './opcua/edge-gateway.module';
 import { OpcUaModule } from './opcua/opcua.module';
 import { AuthModule } from './auth/auth.module';
+import { EventBusModule } from './events/event-gateway.module';
 import { UserEntity } from './auth/user.entity';
 
 @Module({
@@ -33,6 +34,7 @@ import { UserEntity } from './auth/user.entity';
     DataCollectionModule,
     EdgeGatewayModule,
     OpcUaModule,
+    EventBusModule,
   ],
 })
 export class AppModule {}

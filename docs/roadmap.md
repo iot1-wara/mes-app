@@ -1,6 +1,6 @@
 # MES Production Control System – Roadmap 2026
 
-_Document version: v1.0 — July 2026_
+_Document version: v1.1 — July 2026_
 
 ---
 
@@ -17,6 +17,24 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 ---
 
+## 2a. Completed Tasks (v1.1 — July 2026)
+
+### Phase 1 & 2 abgeschlossen
+
+| # | Task | Status | Release |
+|---|------|--------|---------|
+| 1.2 | JWT-Auth mit erzwingender Validierung | ✅ Done | v1.1.0 |
+| 1.3 | Role-based Access Control (Admin/Operator/Viewer) | ✅ Done | v1.1.0 |
+| 1.4 | MQTT Error Suppression entfernt, echtes Error-Logging | ✅ Done | v1.1.0 |
+| 1.5 | WebSocket-Gateway (`/api/edge/ws`) + Event-Bus | ✅ Done | v1.1.0 |
+| 2.1 | Orders-Seite mit CRUD + Status-Werkstatt | ✅ Done | v1.1.0 |
+| 2.4 | Globale API-Error-Handling mit Toast-Notifications | ✅ Done | v1.1.0 |
+| 2.6 | **Full frontend migration to TypeScript**: Alle 15 JS/JSX → TS/TSX; raw `fetch()` ersetzt durch Auth-Client; Login-Token-Handling und ValidationPipe-Fixes | ✅ Done | v1.2.0 |
+
+### Build-Status: Clean (0 TypeScript errors)
+
+---
+
 ## 2. Phases & Milestones
 
 ### Phase 1 — Foundation Hardening _(Weeks 1–4)_
@@ -25,11 +43,11 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 1.1 | Remove `.env` from Git; create `.env.example` | Critical | 15 min | ⬜ pending |
-| 1.2 | Add JWT authentication (NestJS `@nestjs/passport`) + global AuthGuard | Critical | 1–2 days | ⬜ pending |
-| 1.3 | Add role-based access control (Admin / Operator / Viewer) | High | 1 day | ⬜ pending |
-| 1.4 | Remove OPC UA `uncaughtException` suppression; implement real error handling | Critical | 2–3 hrs | ⬜ pending |
-| 1.5 | Implement WebSocket gateway for live edge telemetry (frontend already references it) | High | 2–3 hrs | ⬜ pending |
+| 1.1 | Remove `.env` from Git; create `.env.example` | Critical | 15 min | ✅ done |
+| 1.2 | Add JWT authentication (NestJS `@nestjs/passport`) + global AuthGuard | Critical | 1–2 days | ✅ done |
+| 1.3 | Add role-based access control (Admin / Operator / Viewer) | High | 1 day | ✅ done |
+| 1.4 | Remove OPC UA `uncaughtException` suppression; implement real error handling | Critical | 2–3 hrs | ✅ done |
+| 1.5 | Implement WebSocket gateway for live edge telemetry (frontend already references it) | High | 2–3 hrs | ✅ done |
 | 1.6 | Add rate limiting + request validation on all public endpoints | Medium | 2 hrs | ⬜ pending |
 
 **Exit Criteria:** All API routes protected, no critical vulnerabilities, live dashboard data flowing via WebSocket.
@@ -42,10 +60,10 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 2.1 | Orders: create/edit/delete forms on Orders page | High | 1–2 days | ⬜ pending |
+| 2.1 | Orders: create/edit/delete forms on Orders page | High | 1–2 days | ✅ done |
 | 2.2 | Alarms: acknowledge inline, bulk operations, export | Medium | 1 day | ⬜ pending |
 | 2.3 | Traces: add filter by key_data_point + value range search | Medium | 1 day | ⬜ pending |
-| 2.4 | Global API error handling in React (interceptor + toast notifications) | High | 2–3 hrs | ⬜ pending |
+| 2.4 | Global API error handling in React (interceptor + toast notifications) | High | 2–3 hrs | ✅ done |
 | 2.5 | Machines: add bulk import (CSV/Excel), template download | Low | 1 day | ⬜ pending |
 
 **Exit Criteria:** All backend REST endpoints have corresponding frontend forms; no orphan API calls with no UI.
@@ -138,7 +156,7 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | Layer | Current Stack | Planned Changes |
 |-------|-------------|-----------------|
 | **Backend** | NestJS 11 + TypeScript 5.7 | passport-jwt, `@nestjs/swagger`, class-validator |
-| **Frontend** | React 19 + Vite 7 + Tailwind 4 | Chart.js / Recharts (Phase 5), WebSocket client |
+| **Frontend** | React 19 + Vite 7 + Tailwind 4 + **TypeScript 5.9** (alle Dateien .tsx) | Chart.js / Recharts (Phase 5), WebSocket client |
 | **Database** | PostgreSQL 16 (Docker) | → TimescaleDB extension (Phase 3) |
 | **OPC UA** | `node-opcua` v2.175 | Subscriptions (MonitoredItems) + write-back pro Station, Session-Management |
 | **MQTT** | `mqtt` v5.15 | QoS configuration + topic routing |

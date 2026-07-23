@@ -1,8 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
+import { logoutUser } from "../api/client";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: "📊" },
   { path: "/machines", label: "Stationen", icon: "⚙️" },
+  { path: "/orders", label: "Auftraege", icon: "📋" },
   { path: "/alarms", label: "Alarme", icon: "🔔" },
   { path: "/traces", label: "Traces", icon: "📈" },
   { path: "/edge", label: "Edge Gateway", icon: "🌐" },
@@ -42,7 +44,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-neutral-100">
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
+        <button onClick={() => { logoutUser(); window.location.href = "/auth/login"; }} className="w-full py-2 text-sm text-red-500 hover:text-red-600 font-medium rounded-md hover:bg-red-50 transition-colors">Abmelden</button>
+        <div className="flex items-center gap-2 text-xs text-neutral-400 mt-2">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
           Edge aktiv
         </div>

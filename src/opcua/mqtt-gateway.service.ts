@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-const mqtt = require('mqtt');
+import * as mqtt from 'mqtt';
 
 const SUBSCRIPTION_TOPICS = [
   'mes/production/+/#',
@@ -9,13 +9,12 @@ const SUBSCRIPTION_TOPICS = [
   'mes/orders/+/+',
 ];
 
-function noOpErr() {}
-
 @Injectable()
 export class MqttGatewayService implements OnModuleInit {
-  private client: any;
+  private client: mqtt.MqttClient | null;
   private subscriptionCallbacks = new Map<string, Array<(data: any) => void>>();
   private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
   private readonly logger = new Logger(MqttGatewayService.name);
 
   constructor(private readonly configService: ConfigService) {}
@@ -31,16 +30,26 @@ export class MqttGatewayService implements OnModuleInit {
         reconnectPeriod: 30000,
       });
 
-      // Completely silence ALL internal MQTT events
-      for (const event of ['error', 'close', 'reconnect', 'offline', 'end', 'packetsend', 'packetreceive']) {
-        this.client?.on(event, noOpErr);
-      }
+      this.client.on('error', (err) => {
+        this.logger.error('MQTT client error: ' + err.message);
+      });
 
-      // Suppress unhandled process errors (mqtt-lib throws when broker unreachable)
-      process.removeAllListeners('uncaughtException');
-      process.on('uncaughtException', noOpErr);
-      process.removeAllListeners('unhandledRejection');
-      process.on('unhandledRejection', noOpErr);
+      this.client.on('close', () => {
+        this.logger.warn('MQTT connection closed');
+      });
+
+      this.client.on('reconnect', () => {
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+          this.logger.log(`Attempting MQTT reconnection (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        } else {
+          this.logger.error('MQTT reconnection limit reached');
+        }
+      });
+
+      this.client.on('offline', () => {
+        this.logger.warn('MQTT client is offline');
+      });
 
       setTimeout(() => {
         if (!connectedOnFirstTry) {
@@ -53,7 +62,14 @@ export class MqttGatewayService implements OnModuleInit {
         this.reconnectAttempts = 0;
         this.logger.log('Connected to MQTT broker at ' + brokerUrl);
         for (const topic of SUBSCRIPTION_TOPICS) {
-          try { this.client.subscribe(topic, noOpErr); } catch (_) {}
+          const client = this.client;
+          if (client) {
+            client.subscribe(topic, (err) => {
+              if (err) {
+                this.logger.error(`Failed to subscribe to ${topic}: ${err.message}`);
+              }
+            });
+          }
         }
       });
 
@@ -62,11 +78,13 @@ export class MqttGatewayService implements OnModuleInit {
           const data = JSON.parse(payload.toString());
           const callbacks = this.subscriptionCallbacks.get(topic);
           if (callbacks) for (const cb of callbacks) cb(data);
-        } catch (_) {}
+        } catch (err) {
+          this.logger.error(`Failed to parse MQTT message on topic ${topic}: ${err}`);
+        }
       });
 
     } catch (e: any) {
-      this.logger.warn('Could not initialize MQTT connection: ' + e.message);
+      this.logger.error('Could not initialize MQTT connection: ' + e.message);
       this.client = null;
     }
   }
@@ -84,9 +102,13 @@ export class MqttGatewayService implements OnModuleInit {
   }
 
   async publish(topic: string, data: any): Promise<void> {
-    if (this.client?.connected) {
-      return new Promise<void>((resolve) => {
-        this.client.publish(topic, JSON.stringify(data), { qos: 1 }, () => resolve());
+    const client = this.client;
+    if (client?.connected) {
+      return new Promise<void>((resolve, reject) => {
+        client.publish(topic, JSON.stringify(data), { qos: 1 }, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
     }
   }

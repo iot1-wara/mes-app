@@ -1,19 +1,34 @@
 import { useState, useEffect } from "react";
+import StatCard from "../components/StatCard";
 
-const API = "/api";
+import { api } from "../api/client";
 
 export default function TracesPage() {
   const [traces, setTraces] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [machineFilter, setMachineFilter] = useState("all");
+  const [categoryInput, setCategoryInput] = useState("");
 
+  const validCategories = process.env.NODE_ENV === "production" ? [] : [];
   useEffect(() => {
-    fetch(API + "/traces").then((r) => r.ok ? r.json() : null).then((d) => {
+    api.get("/traces").then((d) => {
       setTraces(Array.isArray(d) ? d : []);
-    }).finally(() => setLoading(false));
+    }).finally(() => setLoading(false)).catch(() => {});
+
+    api.get("/machines").then((d) => {
+      if (Array.isArray(d)) setMachines(d);
+    }).catch(() => {});
   }, []);
 
-  const filtered = filter === "all" ? traces : traces.filter((t) => (t.category||"").toLowerCase() === filter.toLowerCase());
+  const allCategories = [...new Set(traces.map(t => t.category).filter(Boolean))];
+
+  const filtered = traces.filter((t) => {
+    const catMatch = filter === "all" || (t.category||"").toLowerCase() === filter.toLowerCase();
+    const machMatch = machineFilter === "all" || t.machineId === machineFilter;
+    return catMatch && machMatch;
+  });
 
   function catClass(c) {
     if (c === "production") return "bg-status-bg-success text-status-success";
@@ -24,6 +39,16 @@ export default function TracesPage() {
     return "";
   }
 
+  async function addTrace(e) {
+    e.preventDefault();
+    try {
+      await api.post("/traces", { category: categoryInput });
+      setCategoryInput("");
+      const d = await api.get("/traces");
+      if (Array.isArray(d)) setTraces(d);
+    } catch {}
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50">
       <main className="p-6 space-y-6">
@@ -32,13 +57,30 @@ export default function TracesPage() {
           <p className="text-sm text-neutral-500 mt-0.5">Erfassungsdaten aller Stationen</p>
         </div>
 
-        <div className="flex gap-1.5" role="group">
-          {["all","production","temperature","pressure","material"].map((c) => (
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard label="Gesamt" value={String(traces.length)} icon="" />
+          <StatCard label="Kategorien" value={String(allCategories.length)} icon="" />
+          <StatCard label="Maschinen" value={String(machines.length)} icon="" />
+        </div>
+
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {["all", ...allCategories].map((c) => (
             <button key={c} onClick={() => setFilter(c)} className={`px-3.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${filter === c ? "bg-brand-primary text-white" : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50"}`}>
               {c === "all" ? "Alle" : c}
             </button>
           ))}
+          <select value={machineFilter} onChange={(e) => setMachineFilter(e.target.value)} className="px-3 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg ml-auto">
+            <option value="all">Alle Maschinen</option>
+            {machines.map((m) => (
+              <option key={m.id} value={m.id}>{m.name || m.machineName}</option>
+            ))}
+          </select>
         </div>
+
+        <form onSubmit={addTrace} className="flex gap-2">
+          <input type="text" value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder="Kategorie eingeben..." className="flex-1 border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30" />
+          <button type="submit" className="px-4 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-[var(--color-brand-primary-dark)]">Hinzufugen</button>
+        </form>
 
         {loading && <p className="text-center text-neutral-400 py-12 text-sm">Laden...</p>}
 

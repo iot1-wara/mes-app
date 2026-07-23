@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import StatCard from "../components/StatCard";
-
-const API = "/api";
+import { api } from "../api/client";
 
 export default function MachinesPage() {
   const [machines, setMachines] = useState([]);
@@ -10,42 +9,39 @@ export default function MachinesPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch(API + "/machines").then((r) => r.ok ? r.json() : null).then((d) => {
+    api.get("/machines").then((d) => {
       setMachines(Array.isArray(d) ? d : []);
-    });
+    }).catch(() => {});
   }, []);
 
-  function handleDelete(id) {
+  function handleDelete(id: string) {
     if (!confirm("Station wirklich loeschen?")) return;
-    fetch(API + "/machines/" + id, { method: "DELETE" }).then(() => {
+    api.del("/machines/" + id).then(() => {
       setMachines((prev) => prev.filter((m) => m.id !== id));
-    });
+    }).catch(() => {});
   }
 
-  function handleEdit(m) {
+  function handleEdit(m: any) {
     setShowModal(true);
     setForm({ id: m.id, name: m.name || m.machineName || "", type: m.type || "CNC", location: m.location || "" });
   }
 
-  function handleSubmit(e) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const url = form.id ? API + "/machines/" + form.id : API + "/machines";
-    const method = form.id ? "PATCH" : "POST";
-    fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: form.name, type: form.type || "CNC", location: form.location || "" })
-    }).then(() => {
-      refreshList();
-      setShowModal(false);
-      setForm({ id: null, name: "", type: "CNC", location: "" });
-    });
+    const url = form.id ? "/machines/" + form.id : "/machines";
+    const method = form.id ? "patch" : "post";
+    api[method](url, { name: form.name, type: form.type || "CNC", location: form.location || "" })
+      .then(() => {
+        refreshList();
+        setShowModal(false);
+        setForm({ id: null, name: "", type: "CNC", location: "" });
+      }).catch(() => {});
   }
 
   function refreshList() {
-    fetch(API + "/machines").then((r) => r.ok ? r.json() : null).then((d) => {
+    api.get("/machines").then((d) => {
       setMachines(Array.isArray(d) ? d : []);
-    });
+    }).catch(() => {});
   }
 
   const onlineCount = machines.filter((m) => ["online", "running"].includes(m.status)).length;

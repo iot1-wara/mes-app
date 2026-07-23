@@ -16,46 +16,40 @@ docker-compose up -d postgres
 
 # Warten bis DB bereit ist (ca. 10s)
 
-# 2. Backend bauen & starten
-cd frontend
-node node_modules/vite/bin/vite.js build --outDir dist
-cp public/* ../frontend/dist/
-cd ..
-node node_modules/@nestjs/cli/bin/nest.js build
-npx pm2 start dist/main.js --name mes-gateway
+# 2. Frontend bauen & Backend starten
+npm run build:frontend   # Vite baut TSX → JS nach frontend/dist/
+npm run start            # NestJS Backend + eingebettetes Frontend
 
-# 3. Öffnen
-http://localhost:3000
+# Oder getrennt fuer Entwicklung:
+npm run dev:frontend     # Vite Dev-Server (http://localhost:5173)
+npm run start:dev        # NestJS Watch-Modus (Backend: http://localhost:3000)
 ```
 
-## Entwickeln
+## TypeScript
 
-### Backend im Watch-Modus
+Das gesamte Projekt ist in TypeScript geschrieben:
+
+| Bereich | Sprache | Erweiterung |
+|---------|---------|-------------|
+| Backend (`src/`) | TypeScript | `.ts`, `.js` (kompiliert) |
+| Frontend (`frontend/src/`) | **TypeScript** | **.tsx** (React Komponenten + Hooks) |
+| Tests | TypeScript | `.spec.ts` |
+
+Alle Importe in den TSX-Dateien verwenden extensionless paths (Vite resolveiert automatisch).
+
+## Entwicklung
+
+Backend im Watch-Modus:
 ```bash
-# TypeScript-Kompilierung + Server neu starten bei Code-Changes
-node node_modules/@nestjs/cli/bin/nest.js start --watch
+npm run start:dev        # NestJS Watch → http://localhost:3000
 ```
 
-### Frontend Dev-Server
+Frontend Dev-Server (unabhaengig vom Backend):
 ```bash
-cd frontend
-node node_modules/vite/bin/vite dev
+npm run dev:frontend     # Vite Dev Server → http://localhost:5173
 ```
 
-## Build-Prozess
-
-```bash
-# 1. Frontend bauen
-cd frontend
-node node_modules/vite/bin/vite build --outDir dist
-cp public/* ../frontend/dist/
-
-# 2. Backend bauen
-nest build   # oder: node node_modules/@nestjs/cli/bin/nest.js build
-
-# 3. Starten
-npx pm2 start dist/main.js --name mes-gateway
-```
+## Build & Deployment
 
 ## Troubleshooting
 

@@ -1,40 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { api, showToast } from "../api/client";
 
-const API = "/api";
+const API_BASE = "/api";
 
 export default function EdgePage() {
   const [health, setHealth] = useState(null);
   const [cpuLoad, setCpuLoad] = useState({ usagePercent: 0 });
-  const [memInfo] = useState({ totalMemoryBytes: 8e9 + Math.random() * 2e9, usedMemoryBytes: (4 + Math.random() * 1) * 1e9 });
-  const [diskTotal, setDiskTotal] = useState(250e9);
+  const [memInfo] = useState({ totalMemoryBytes: 8e9 + (Math.random() * 2e9), usedMemoryBytes: (4 + Math.random()) * 1e9 });
+  const [diskTotal] = useState(250e9);
   const [diskUsage, setDiskUsage] = useState((Math.random() * 30 + 5) * 1e9);
   const [logs, setLogs] = useState([]);
+  const [wsConnected, setWsConnected] = useState(false);
+  const wsRef = useRef(null);
 
   useEffect(() => {
-    fetch(API + "/edge/health").then((r) => r.ok ? r.json() : null).then(setHealth);
+    api.get("/edge/health").then(setHealth).catch(() => {});
   }, []);
-
-  const memPct = (((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1)) * 100).toFixed(1);
-  const diskPct = ((diskUsage / diskTotal) * 100).toFixed(1);
 
   useEffect(() => {
     try {
-      const ws = new WebSocket("ws://localhost:3000/api/edge/ws");
+      const ws = new WebSocket(`ws://${window.location.host}/api/edge/ws`);
       let alive = true;
-      ws.onopen = () => {};
+      ws.onopen = () => { setWsConnected(true); addLog("connected"); };
       ws.onmessage = (e) => {
         if (!alive) return;
         try {
           const msg = JSON.parse(e.data);
+          if (msg.type === "heartbeat") return;
           if (msg.cpuLoad) setCpuLoad(msg.cpuLoad);
           if (msg.diskUsage && diskTotal > 0) setDiskUsage(msg.diskUsage.used || diskUsage);
-          if (msg.logEntry) setLogs((l) => { const n = [...l, msg.logEntry]; return n.length > 30 ? n.slice(-30) : n; });
+          if (msg.logEntry) addLog(msg.logEntry);
         } catch {}
       };
-      ws.onerror = () => {};
-      ws.onclose = () => { alive = false; };
+      ws.onerror = () => { /* handled by onclose */ };
+      ws.onclose = () => { alive = false; setWsConnected(false); };
+      wsRef.current = ws;
       return () => { alive = false; ws.close(); };
     } catch {}
+  }, []);
+
+  function addLog(entry) {
+    setLogs(prev => { const n = [...prev, `[${new Date().toLocaleTimeString()}] ${entry || JSON.stringify(entry)} `]; return (n.length > 50 ? n.slice(-50) : n); });
+  }
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN && !wsConnected) {
+        wsRef.current.close();
+        setWsConnected(false);
+      }
+    }, 35000);
+    return () => clearInterval(interval);
   }, []);
 
   function barColor(pct) {
@@ -67,16 +83,16 @@ export default function EdgePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: "CPU Auslastung", value: (cpuLoad?.usagePercent || 0) * 100, unit: "%", fmt: (v) => v.toFixed(1) + "%" },
-            { label: "Speicher", value: parseFloat(memPct), unit: "%", fmt: () => memPct + "%" },
-            { label: "Festplatte", value: parseFloat(diskPct), unit: "%", fmt: () => diskPct + "%" },
-            { label: "WS Status", value: 0, color: true },
+            { label: "Speicher", value: parseFloat(((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1)) * 100).toFixed(1), unit: "%", fmt: () => ((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1) * 100).toFixed(1) + "%" },
+            { label: "Festplatte", value: parseFloat((diskUsage / diskTotal) * 100), unit: "%", fmt: () => ((diskUsage / diskTotal) * 100).toFixed(1) + "%" },
+            { label: "WS Status", value: 0, color: true }
           ].map((card, i) => (
             <div key={i} className="bg-white rounded-lg shadow-card border border-neutral-200 p-5">
               <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{card.label}</p>
               {card.color ? (
-                <span className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md text-xs font-medium bg-status-bg-success text-status-success">
-                  <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
-                  CONNECTED
+                <span className={`inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md text-xs font-medium ${wsConnected ? "bg-status-bg-success text-status-success" : "bg-neutral-200 text-neutral-500"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? "bg-status-success animate-pulse" : "bg-neutral-400"}`} />
+                  {wsConnected ? "CONNECTED" : "DISCONNECTED"}
                 </span>
               ) : (
                 <>

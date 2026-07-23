@@ -29,9 +29,10 @@ export class DataCollectionService {
   }
 
   async findByTimeRange(machineId: string, start: Date, end: Date, nodeId?: string): Promise<DataPointEntity[]> {
-    const qry = this.dataPointsRepo.createQueryBuilder('dp2');
-    qry.where('dp2.machine_id = :mid', { mid: machineId }).andWhere('dp2.timestamp BETWEEN :s AND :e', { s: start, e: end });
-    if (nodeId) qry.andWhere('dp2.node_id = :nid', { nid: nodeId });
+    const qry = this.dataPointsRepo.createQueryBuilder('dp')
+      .where('dp.machine_id = :mid', { mid: machineId })
+      .andWhere('dp.timestamp BETWEEN :s AND :e', { s: start, e: end });
+    if (nodeId) qry.andWhere('dp.node_id = :nid', { nid: nodeId });
     return qry.getMany();
   }
 

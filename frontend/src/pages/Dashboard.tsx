@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import StatCard from "../components/StatCard";
+import { api } from "../api/client";
 
 const API = "/api";
 
@@ -7,15 +8,15 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ machines: 0, alarms: 0, health: false });
 
   useEffect(() => {
-    fetch(API + "/machines").then((r) => r.ok ? r.json() : null).then((m) => {
+    api.get("/machines").then((m) => {
       if (Array.isArray(m)) setStats((s) => ({ ...s, machines: m.length }));
-    });
-    fetch(API + "/alarms/stats/active-count").then((r) => r.ok ? r.json() : null).then((a) => {
+    }).catch(() => {});
+    api.get("/alarms/stats/active-count").then((a) => {
       if (typeof a === "number") setStats((s) => ({ ...s, alarms: a }));
-    });
-    fetch(API + "/edge/health").then((r) => r.ok ? r.json() : null).then((h) => {
+    }).catch(() => {});
+    api.get("/edge/health").then((h) => {
       if (h && h.ok) setStats((s) => ({ ...s, health: true }));
-    });
+    }).catch(() => {});
   }, []);
 
   return (

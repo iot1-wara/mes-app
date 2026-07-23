@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as express from 'express';
 import { ValidationPipe, UnauthorizedException, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { WsAdapter } from '@nestjs/platform-ws';
 
 class AllAuthGuard implements CanActivate {
   private jwtService?: JwtService;
@@ -22,8 +23,7 @@ class AllAuthGuard implements CanActivate {
     // Auth header check
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      // No token — allow but mark as unauthenticated
-      return true;  
+      throw new UnauthorizedException('Missing authentication token');
     }
     
     const token = authHeader.split(' ')[1];
@@ -37,8 +37,7 @@ class AllAuthGuard implements CanActivate {
         role: payload.role 
       };
     } catch (err) {
-      // Invalid token — log but allow request to proceed
-      console.warn(`[Auth] Invalid token for ${request.url}:`, err.message);
+      throw new UnauthorizedException('Invalid or expired token');
     }
     
     return true;
@@ -47,6 +46,9 @@ class AllAuthGuard implements CanActivate {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // WebSocket adapter
+  app.useWebSocketAdapter(new WsAdapter(app));
   
   // CORS setup
   app.enableCors({ origin: '*', credentials: true });
