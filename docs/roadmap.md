@@ -76,29 +76,32 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 4.1 | Order workflow states: `draft` → `released` → `in_progress` → `completed` / `cancelled` | Critical | 2–3 days | ⬜ pending |
-| 4.2 | Production step tracking (operation sequencing per order) | High | 2 days | ⬜ pending |
+| 4.1 | Order workflow states: `draft` → `released` → `in_progress` → `completed` / `cancelled` + SPS-Flags `udiONo`/`uiOPos`/`uiOpNo` im State-Übergang | Critical | 2–3 days | ⬜ pending |
+| 4.2 | Production step tracking: Carrier Entity + dbProcessData-Routing (`iStepNo` → `stepNo`, `iResourceID` → `nextResourceId`) | Critical | 2 days | ⬜ pending |
 | 4.3 | Material consumption tracking (link materials to orders) | Medium | 1–2 days | ⬜ pending |
-| 4.4 | Start/Stop commands via OPC UA write-back to machines | High | 2–3 days | ⬜ pending |
+| 4.4 | **Dispatcher-Service**: OPC UA Subscription auf `xStart` pro Station + stMES-Handshake logik (Lesen/Antworten via write-back) | Critical | 3–5 days | ⬜ pending |
+| 4.5 | Carrier-CRUD REST API erstellen (create/read/update/delete Carriers mit dbProcessData-Feldern) | High | 1 day | ⬜ pending |
+| 4.6 | Error handling & downtime logging per machine + Mapping auf `xErrL0`/`xErrL1`/`xErrL2` Bits | High | 1–2 days | ⬜ pending |
 | 4.5 | Error handling & downtime logging per machine | High | 1–2 days | ⬜ pending |
 
-**Exit Criteria:** Full order lifecycle flow with state transitions, material tracking, and machine control commands.
+**Exit Criteria:** Full order lifecycle flow with state transitions, material tracking (via Carrier parameters), SPS handshake via OPC UA subscriptions, and carrier routing.
 
 ---
 
-### Phase 5 — Dashboard Intelligence _(Weeks 17–20)_
+### Phase 5 — Dashboard Intelligence: Line Overview + KPIs _(Weeks 17–20)_
 
-**Goal:** Transform the dashboard from a CRUD viewer into an intelligent operations center.
+**Goal:** Dashboard focuses on physical production line overview first (stations + carriers), then adds real-time OEE and historical trends.
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| 5.1 | OEE calculation (Availability × Performance × Quality) with Timescale continuous aggregates | Critical | 3–4 days | ⬜ pending |
+| 5.0 _(neu)_ | **Line Overview & Carrier Map**: Visuelles Linien-Diagramm aller Stationen +Carrier-Positionen; Handshake-Status (`xStart`/`xQryBusy`); Echtzeit-Werkstückträger-Tabelle mit Filter nach Status/Kategorie | Critical | 3–4 days | ⬜ pending |
+| 5.1 | OEE calculation (Availability × Performance × Quality) with Timescale continuous aggregates | High | 3–4 days | ⬜ pending |
 | 5.2 | Real-time KPI widgets on Dashboard: throughput, yield, machine status (live via WebSocket) | High | 2–3 days | ⬜ pending |
 | 5.3 | Historical trend charts for key metrics (time-range selector) | High | 2–3 days | ⬜ pending |
 | 5.4 | Machine availability and downtime Pareto chart | Medium | 1–2 days | ⬜ pending |
 | 5.5 | Export dashboards to PDF per shift/day | Low | 1 day | ⬜ pending |
 
-**Exit Criteria:** Dashboard shows real-time OEE, trend charts with custom date pickers, and actionable KPIs for operations managers.
+**Exit Criteria:** Dashboard shows line overview (all stations + carrier positions via WebSocket), real-time OEE, trend charts with custom date pickers, and actionable KPIs for operations managers.
 
 ---
 
@@ -137,28 +140,108 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | **Backend** | NestJS 11 + TypeScript 5.7 | passport-jwt, `@nestjs/swagger`, class-validator |
 | **Frontend** | React 19 + Vite 7 + Tailwind 4 | Chart.js / Recharts (Phase 5), WebSocket client |
 | **Database** | PostgreSQL 16 (Docker) | → TimescaleDB extension (Phase 3) |
-| **OPC UA** | `node-opcua` v2.175 | Connection retry + write-back support |
+| **OPC UA** | `node-opcua` v2.175 | Subscriptions (MonitoredItems) + write-back pro Station, Session-Management |
 | **MQTT** | `mqtt` v5.15 | QoS configuration + topic routing |
 | **Tests** | Jest + Supertest (E2E only) → Unit tests (Phase 6) |
 | **Deploy** | pm2 / Docker Compose / nginx | Docker Swarm or K8s evaluation (future) |
 
 ---
 
-## 4. Key Architecture Decisions & Rationale
+## 4. OPC UA SPS-Schnittstellen: `stMES` & `dbProcessData`
 
-### 4.1 Why TimescaleDB over InfluxDB?
+### 4.1 `stMES` UDT pro Station — Request/Response-Handshake
+
+Jede Maschine/Station exponiert einen standardisierten `stMES`-UDT (Vorlage) mit zwei Teilen:
+
+**State-Teil (`stMesState`) — Betriebsmodus-Bits:**
+- `xAuto` / `xManual` / `xBusy` / `xReset` — Betriebsart
+- `xErrL0`, `xErrL1`, `xErrL2` — Fehler-Level (Info / Error / Warning)
+- `xMES` — MES-Modus aktiv
+
+→ Mapping auf das bestehende `MachineEntity.status`: Die Bits werden als separate boolean-Felder in der Entity ergänzt. Der Dashboard-Status wird aus `xBusy + xAuto` berechnet.
+
+**Query-Teil (`stMesQuery`) — Handshake-Felder:**
+- `uiResourceId` — Stations-ID (Selbstidentifikation)
+- `udiONo`, `uiOPos`, `uiOpNo` — Order/Position/Operation
+- `uiCarrierId` — Aktueller Werkstückträger an der Station
+- `udiPNo` — Part Number des Werkstücks
+- `xStart` — **Trigger**: Station meldet "ich brauche MES-Antwort"
+- `xQryBusy` / `xDone` / `xError` — Handshake-Flagger (MES verarbeiten → antworten)
+
+**Handshake-Ablauf:**
+1. Carrier kommt an Station → Station setzt `xStart = true`
+2. MES-Backend erkennt `xStart` via OPC UA Subscription, löst Order/Operation anhand `uiCarrierId` + `uiResourceId` auf
+3. MES schreibt die Order-Daten zurück (`udiONo`, `uiOPos`, `uiOpNo`, ...) und setzt `xDone = true` (oder `xError`)
+4. Station empfängt die Daten, `xStart` wird zurückgesetzt
+
+**Konsequenzen für die Roadmap:**
+- `xStart` muss event-getrieben via OPC UA Monitored Items abonniert werden (kein Polling) — Task 1.4 präzisiert auf Subscription-basierten Mechanismus
+- Dispatcher-Service in Phase 4, der ankommende Handshake-Events gegen OrdersService auflöst
+- Pro Station eine eigene Subscriptions-Instanz schreiben → Aufwandsschätzung in Task 4.4 erweitert
+
+### 4.2 `dbProcessData` (DB151) — Werkstückträger-Datensatz
+
+| Feld | Bedeutung | Mapping auf MES-Schema |
+|------|-----------|----------------------|
+| `iCarrierID` | Werkstückträgernummer | → **Neue Entity: `CarrierEntity.carrierId`** (Task 4.6) |
+| `iStepNo` | Aktueller Workplan-Schritt | → Carrier.stepNo (Routing) |
+| `iResourceID` | Nächste Zielstation | → Carrier.nextResourceId (Routing) |
+| `iPar1` | Deckelfarbe (0=keine, 1..4=Farbcodes) | → Carrier.parameters JSONB ({deckel: "rot"}) |
+| `iPar2` / `iPar3` / `iPar4` | Anzahl rote/grüne/blaue Kugeln | → Carrier.quantity red/green/blue |
+| `ldtTimeStamp` | Zeitstempel Prozessabschluss | → Carrier.lastProcessTimestamp |
+
+**Offene Frage:** `dbProcessData` als **zentrale DB** (eine pro Anlage, alle Stationen lesen/schreiben) oder **pro Station instanziiert**?
+→ Dies entscheidet über Schreibkonflikt-Risiko. Muss vor Phase 4 durch Prüfung des OPC UA Node-Tree der Anlage geklärt werden.
+
+### 4.3 Neue Entity: `Carrier` (Werkstückträger)
+
+Der Carrier ist die zentrale Entität im MES — er wandert durch die生产线, trägt mehrere Orders/Teile nacheinander.
+
+```typescript
+@Entity('carriers')
+export class CarrierEntity {
+  @PrimaryGeneratedColumn('uuid') id: string;          // interne UUID
+  @Column({ unique: true }) carrierId: number;          // iCarrierID aus dbProcessData
+  @Column() stepNo: number;                             // aktueller Workplan-Schritt (iStepNo)
+  @Column() nextResourceId?: number;                    // Zielstation (iResourceID)
+  @Column({ type: 'jsonb', default: '{}' }) parameters: Record<string, any>;  // iPar1..4
+  @Column('int', { array: true, default: '{0,0,0}' }) quantityRedGreenBlue: number[];
+  @Column() partNumber?: string;                        // udiPNo aus stMES
+  @ManyToOne(() => OrderEntity) orderId?: OrderEntity;   // verknüpfter Auftrag
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' }) lastProcessTimestamp: Date;
+}
+```
+
+### 4.4 Dashboard-Primärfokus: Stationen & Werkstückträger
+
+Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
+1. **Alle verbundenen Stationen** mit Echtzeit-Status (aus `stMesState` Bits)
+2. **Aktuelle Positionsübersicht aller Werkstückträger** (welcher Carrier an welcher Station, welchen Schritt)
+3. **Handshake-State**: Welche Stationen warten auf MES-Antwort (`xStart=true`), welche verarbeiten aktuell eine Anfrage (`xQryBusy=true`)
+
+→ Phase 5 Task 5.2 wird präzisiert: Statt "OEE als primärer KPI" bekommt das Dashboard zuerst die physische Linie-Übersicht (Visuelle Linien-Diagramm mit allen Stationen + Carriern als Icons auf den Stations-Blöcken).
+
+### 4.5 Key Architecture Decisions & Rationale
+
+#### 4.5.1 Why TimescaleDB over InfluxDB?
 
 - **Minimal migration effort**: Extension on existing PostgreSQL installation
 - **SQL everywhere**: No new query language (Flux), existing TypeORM + SQL knowledge reusable
 - **Single deployment unit**: Docker Compose change only (`postgres:16` → `timescale/timescaledb`)
 - **Hybrid benefit**: Still full relational queries for orders, alarms, machines — only hypertable for time-series data
 
-### 4.2 WebSocket vs Polling
+#### 4.5.2 OPC UA Subscriptions statt Polling für den stMES-Handshake
 
-- Real-time dashboards require WebSocket (Phase 1) or SSE — polling introduces unacceptable latency for production monitoring
+- Der `xStart`/`xDone`-Handshake ist event-getrieben: pro Station ein OPC UA Monitored Item auf `xStart`
+- Das vermeidet unnötige Last bei hoher Zykluszeit und mehreren Stationen
+- Die Subscription Events werden direkt per WebSocket an das Dashboard durchgereicht
+
+#### 4.5.3 WebSocket vs Polling für Dashboard-Echtzeitdaten
+
+- Echtzeit-Dashboards verlangen WebSocket (Phase 1) oder SSE — polling introduces unacceptable latency for production monitoring
 - NestJS `@nestjs/websocket` with `@nestjs/platform-ws` adapter
 
-### 4.3 Authentication Strategy
+#### 4.5.4 Authentication Strategy
 
 - JWT access tokens + refresh token rotation
 - Stored in HTTP-only cookies (XSS protection)
@@ -174,6 +257,8 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | TimescaleDB data migration corrupts existing data | Medium | Low | Full PostgreSQL backup + validation script before cutover |
 | JWT token rotation complexity | Medium | Medium | Use established library (`@nestjs/jwt`), thorough testing |
 | Frontend performance with large trace datasets | High | Medium | Server-side pagination (already planned), virtual scrolling chart renders |
+| dbProcessData Speichermodell unbekannt (zentral vs. pro Station) | High | Mittel | OPC UA Node-Tree der Anlage prüfen vor Phase 4 — entscheidet über Concurrency-Handling |
+| Mehrfach-Schreiben auf dieselbe DB möglich → Schreibkonflikte | High | Hoch | Falls zentral: optimistic locking mit Version-Feld in dbProcessData; falls pro Station: nur Lesezugriff vom MES aus |
 
 ---
 
@@ -210,6 +295,8 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | Q3 | Any regulatory requirements (FDA 21 CFR Part 11, audit trails)? | Would require immutable logs + change history per order |
 | Q4 | Maximum acceptable dashboard latency for machine status? | Real-time (<1s) or near-real-time (<5s)? |
 | Q5 | Should alarm acknowledgments be logged for compliance? | Recommend: yes, with user_id + timestamp + reason field |
+| Q6 | **dbProcessData Speichermodell:** zentral (eine DB pro Anlage) oder pro Station instanziiert? | __Prioritär:__ OPC UA Node-Tree der Anlage prüfen — entscheidet über Schreibkonflikt-Risiko und Concurrency-Handling in Phase 4 |
+| Q7 | Was bedeutet `uiStopperId` aus `stMesQuery` konkret für unser MES? | Brauchen wir im Carrier/Routing oder nur zur Maschinen-Kommunikation? |
 
 ---
 
@@ -241,19 +328,34 @@ docs/
   onboarding.md          → hypertable creation steps
 ```
 
-### Phase 4 (Workflows)
+### Phase 4 (Workflows + Carrier + Dispatcher)
 ```
-src/orders/
-  order.entity.ts        ← add workflow status enum, step tracking
-  order.service.ts       ← state transition logic, validation Guards
+src/
+  carriers/              ← new module
+    carrier.entity.ts    ← dbProcessData mapping (carrierId, stepNo, nextResourceId...)
+    carrier.controller.ts
+    carrier.service.ts
+  dispatchers/           ← new module
+    dispatcher.service.ts  ← stMES Handshake: Subscription + write-back pro Station
+app.module.ts            ← add CarrierModule, DispatcherModule
 src/opcua/
-  opcua.service.ts       ← add write-back capability
+  opcua.service.ts       ← subscription-manager für Multiple Machines (monitoredItems pro Station)
 docs/
-  architecture.md        → new section: production workflow diagram
+  architecture.md        → new section: sPS handshake flow (stMES dbProcessData)
+```
+
+### Phase 5 (Dashboard Line Overview + KPIs)
+```
+frontend/src/
+  pages/
+    LineOverview.jsx     ← Visual line with all stations + carrier icons on station blocks
+    Carriers.jsx         ← Carrier table with filter by status/location/type
+docs/
+  roadmap.md             → Section 4.4: Dashboard primär-Fokus (Stations + Carriers)
 ```
 
 ---
 
 _Roadmap owner: mes-app team_
 _Last updated: July 2026_
-_Next review: After Phase 1 completion_
+_Next review: After Phase 1 completion (SPS-Handshake & Dashboard-Fokus in v1.1)_
