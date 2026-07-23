@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Module, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule, InjectDataSource } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { DataSource } from 'typeorm';
+import type { DataSource } from 'typeorm';
 import { AlarmsModule } from './alarms/alarms.module';
 import { MachinesModule } from './machines/machines.module';
 import { OrdersModule } from './orders/orders.module';
@@ -13,6 +13,7 @@ import { OpcUaModule } from './opcua/opcua.module';
 import { AuthModule } from './auth/auth.module';
 import { EventBusModule } from './events/event-gateway.module';
 import { UserEntity } from './auth/user.entity';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Injectable()
 export class TimescaleMigrationService implements OnModuleInit {
@@ -77,7 +78,7 @@ export class TimescaleMigrationService implements OnModuleInit {
     EdgeGatewayModule,
     OpcUaModule,
     EventBusModule,
+    DashboardModule,
   ],
-  providers: [TimescaleMigrationService],
 })
 export class AppModule {}
