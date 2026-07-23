@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { AlarmsService } from './alarms.service';
 import type { CreateAlarmDto } from './alarm.dto';
 
@@ -21,6 +21,17 @@ export class AlarmsController {
   @Post(':id/acknowledge')
   @HttpCode(HttpStatus.OK)
   acknowledge(@Param('id') id: string) { return this.alarmsService.acknowledge(id); }
+
+  @Post('bulk-acknowledge')
+  @HttpCode(HttpStatus.OK)
+  bulkAcknowledge(@Body() body: { ids: string[] }) {
+    return this.alarmsService.bulkAcknowledge(body.ids);
+  }
+
+  @Get('export/csv')
+  exportCsv() {
+    return this.alarmsService.exportCsv();
+  }
 
   @Delete(':id')
   remove(@Param('id') id: string) { return this.alarmsService.remove(id); }

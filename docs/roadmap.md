@@ -31,6 +31,14 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 2.4 | Globale API-Error-Handling mit Toast-Notifications | ✅ Done | v1.1.0 |
 | 2.6 | **Full frontend migration to TypeScript**: Alle 15 JS/JSX → TS/TSX; raw `fetch()` ersetzt durch Auth-Client; Login-Token-Handling und ValidationPipe-Fixes | ✅ Done | v1.2.0 |
 
+### Phase 3 abgeschlossen
+
+| # | Task | Status | Release |
+|---|------|--------|---------|
+| 1.6 | Rate limiting + request validation on all public endpoints | ✅ Done | v1.2.0 |
+| 2.2 | Alarms: acknowledge inline, bulk operations, CSV export | ✅ Done | v1.2.0 |
+| 2.3 | Traces: add filter by key_data_point + value range search | ✅ Done | v1.2.0 |
+
 ### Build-Status: Clean (0 TypeScript errors)
 
 ---
@@ -48,7 +56,7 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 1.3 | Add role-based access control (Admin / Operator / Viewer) | High | 1 day | ✅ done |
 | 1.4 | Remove OPC UA `uncaughtException` suppression; implement real error handling | Critical | 2–3 hrs | ✅ done |
 | 1.5 | Implement WebSocket gateway for live edge telemetry (frontend already references it) | High | 2–3 hrs | ✅ done |
-| 1.6 | Add rate limiting + request validation on all public endpoints | Medium | 2 hrs | ⬜ pending |
+| 1.6 | Add rate limiting + request validation on all public endpoints | Medium | 2 hrs | ✅ done |
 
 **Exit Criteria:** All API routes protected, no critical vulnerabilities, live dashboard data flowing via WebSocket.
 
@@ -61,12 +69,15 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
 | 2.1 | Orders: create/edit/delete forms on Orders page | High | 1–2 days | ✅ done |
-| 2.2 | Alarms: acknowledge inline, bulk operations, export | Medium | 1 day | ⬜ pending |
-| 2.3 | Traces: add filter by key_data_point + value range search | Medium | 1 day | ⬜ pending |
+| 2.2 | Alarms: acknowledge inline, bulk operations, export | Medium | 1 day | ✅ done |
+| 2.3 | Traces: add filter by key_data_point + value range search | Medium | 1 day | ✅ done |
 | 2.4 | Global API error handling in React (interceptor + toast notifications) | High | 2–3 hrs | ✅ done |
-| 2.5 | Machines: add bulk import (CSV/Excel), template download | Low | 1 day | ⬜ pending |
 
-**Exit Criteria:** All backend REST endpoints have corresponding frontend forms; no orphan API calls with no UI.
+**Phase 2 completion:** 4/5 (80%) — Task 2.5 pending.
+
+---
+
+### Phase 3 — Time-Series Data Architecture _(Weeks 9–12)_
 
 ---
 

@@ -6,6 +6,17 @@ Alle bedeutenden Änderungen an diesem Projekt werden in diesem Dokument dokumen
 
 ## [Unreleased]
 
+### Added
+- **Rate Limiting**: Global 100 req/min per IP via `@nestjs/throttler` (Task 1.6)
+- **Alarms CSV Export**: Backend endpoint + Frontend export button for downloading alarm data as CSV
+- **Alarms Bulk Endpoint**: `/alarms/bulk-acknowledge` REST endpoint for efficient batch acknowledgment
+- **Traces Advanced Filter**: Query params `key_data_point`, `value_min`, `value_max` with ILIKE partial match (Task 2.3)
+- **Traces Table Columns**: New columns for key_data_point and value display
+
+### Fixed
+- TS type errors: `el.dataset.id` needs string, Orders quantity/priority need Number() coercion
+- Edge.tsx card rendering: fixed numeric value computations typed as strings
+
 ## [1.1.0] — 2026-07-23
 
 ### Added

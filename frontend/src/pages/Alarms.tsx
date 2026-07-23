@@ -5,7 +5,7 @@ import StatCard from "../components/StatCard";
 const API = "/api";
 
 export default function AlarmsPage() {
-  const [alarms, setAlarms] = useState([]);
+  const [alarms, setAlarms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
@@ -47,11 +47,8 @@ export default function AlarmsPage() {
 
   async function handleBulkAcknowledge() {
     try {
-      let acked = 0;
-      for (const id of selected) {
-        await api.post(`/alarms/${id}/acknowledge`, {});
-        acked++;
-      }
+      const res = await api.post("/alarms/bulk-acknowledge", { ids: Array.from(selected) });
+      const acked = res.affected || res.length || selected.size;
       showToast(`${acked} Alarme acknowledged`, "success");
       setAlarms(prev => prev.map(a => selected.has(a.id) ? { ...a, acknowledged_at: new Date().toISOString() } : a));
       setSelected(new Set());
@@ -100,6 +97,19 @@ export default function AlarmsPage() {
                 Bulk Acknowledge ({selected.size})
               </button>
             )}
+            <button onClick={() => {
+              api.getText("/alarms/export/csv").then((csv) => {
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "alarms-export.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+              }).catch(err => showToast(err.message, "error"));
+            }} className="px-3 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50">
+              Export CSV
+            </button>
           </div>
         </div>
 

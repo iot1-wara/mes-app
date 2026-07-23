@@ -82,17 +82,17 @@ export default function EdgePage() {
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "CPU Auslastung", value: (cpuLoad?.usagePercent || 0) * 100, unit: "%", fmt: (v) => v.toFixed(1) + "%" },
-            { label: "Speicher", value: parseFloat(((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1)) * 100).toFixed(1), unit: "%", fmt: () => ((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1) * 100).toFixed(1) + "%" },
-            { label: "Festplatte", value: parseFloat((diskUsage / diskTotal) * 100), unit: "%", fmt: () => ((diskUsage / diskTotal) * 100).toFixed(1) + "%" },
-            { label: "WS Status", value: 0, color: true }
+            { label: "CPU Auslastung", value: (cpuLoad?.usagePercent || 0) * 100, unit: "%", fmt: () => ((cpuLoad?.usagePercent || 0) * 100).toFixed(1) + "%" },
+            { label: "Speicher", value: +(((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1)) * 100).toFixed(1), unit: "%", fmt: () => ((memInfo?.usedMemoryBytes || 0) / (memInfo?.totalMemoryBytes || 1) * 100).toFixed(1) + "%" },
+            { label: "Festplatte", value: +((diskUsage / diskTotal) * 100).toFixed(1), unit: "%", fmt: () => ((diskUsage / diskTotal) * 100).toFixed(1) + "%" },
+            { label: "WS Status", connected: wsConnected ? "CONNECTED" : "DISCONNECTED", connectedClass: wsConnected ? "bg-status-bg-success text-status-success" : "bg-neutral-200 text-neutral-500", dotCls: wsConnected ? "bg-status-success animate-pulse" : "bg-neutral-400" }
           ].map((card, i) => (
             <div key={i} className="bg-white rounded-lg shadow-card border border-neutral-200 p-5">
               <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{card.label}</p>
-              {card.color ? (
-                <span className={`inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md text-xs font-medium ${wsConnected ? "bg-status-bg-success text-status-success" : "bg-neutral-200 text-neutral-500"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? "bg-status-success animate-pulse" : "bg-neutral-400"}`} />
-                  {wsConnected ? "CONNECTED" : "DISCONNECTED"}
+              {card.connected != null ? (
+                <span className={`inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md text-xs font-medium ${card.connectedClass}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${card.dotCls}`} />
+                  {card.connected}
                 </span>
               ) : (
                 <>

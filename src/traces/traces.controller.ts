@@ -10,10 +10,18 @@ export class TracesController {
   create(@Body() dto: CreateTraceDto) { return this.tracesService.create(dto); }
 
   @Get()
-  findAll(@Query('machine_id') machineId?: string, @Query('category') category?: TraceCategoryType) {
-    if (machineId) return this.tracesService.getTracesByMachine(machineId);
-    if (category) return this.tracesService.getTracesByCategory(category);
-    return this.tracesService.findAll();
+  findAll(@Query('machine_id') machineId?: string, 
+          @Query('category') category?: TraceCategoryType, 
+          @Query('key_data_point') keyDataPoint?: string,
+          @Query('value_min') valueMin?: number,
+          @Query('value_max') valueMax?: number) {
+    if (machineId && !category && !keyDataPoint && valueMin == null && valueMax == null) {
+      return this.tracesService.getTracesByMachine(machineId);
+    }
+    if (category && !machineId && !keyDataPoint && valueMin == null && valueMax == null) {
+      return this.tracesService.getTracesByCategory(category);
+    }
+    return this.tracesService.findAll({ machine_id: machineId, category, key_data_point: keyDataPoint, value_min: valueMin, value_max: valueMax });
   }
 
   @Get(':id')

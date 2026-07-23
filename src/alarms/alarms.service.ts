@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { AlarmEntity } from './alarm.entity';
 import type { CreateAlarmDto, UpdateAlarmDto } from './alarm.dto';
 
@@ -52,5 +52,29 @@ export class AlarmsService {
 
   async setActiveCount(): Promise<number> {
     return this.alarmsRepo.count({ where: { acknowledged: false } });
+  }
+
+  async bulkAcknowledge(ids: string[]): Promise<number> {
+    const result = await this.alarmsRepo.update(
+      { id: In(ids), acknowledged: false },
+      { acknowledged: true, acknowledged_at: new Date() },
+    );
+    return result.affected || 0;
+  }
+
+  async exportCsv(): Promise<string> {
+    const alarms = await this.alarmsRepo.find({ order: { created_at: 'DESC' } });
+    const headers = ['ID', 'Severity', 'Machine', 'Message', 'Source', 'Acknowledged', 'Acknowledged At', 'Created At'];
+    const rows = alarms.map(a => [
+      a.id,
+      a.severity,
+      a.machine_id || '',
+      `"${(a.message || '').replace(/"/g, '""')}"`,
+      a.source || '-',
+      a.acknowledged ? 'true' : 'false',
+      a.acknowledged_at ? new Date(a.acknowledged_at).toISOString() : '',
+      a.created_at ? new Date(a.created_at).toISOString() : '',
+    ]);
+    return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   }
 }

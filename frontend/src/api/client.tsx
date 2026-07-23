@@ -41,7 +41,7 @@ export function showToast(message: string, type = "info") {
     };
     el.className = `px-4 py-3 rounded-lg shadow-lg border-l-4 ${colors[type] || colors.info} mb-2 flex items-center gap-2`;
     el.textContent = message;
-    el.dataset.id = Date.now();
+    el.dataset.id = String(Date.now());
     toasts.appendChild(el);
     setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity 0.3s"; setTimeout(() => el.remove(), 300); }, 3500);
   }
@@ -96,9 +96,46 @@ async function request(endpoint: string, options: FetchConfig = {}): Promise<any
   return res.json();
 }
 
+async function requestText(endpoint: string, options: FetchConfig = {}): Promise<string> {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+  const config: FetchConfig = {
+    headers: {
+      "Content-Type": "application/json",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...options.headers
+    },
+    ...options
+  };
+  if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
+    config.body = JSON.stringify(config.body);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, config);
+  } catch (err: any) {
+    const msg = err.message || "Network error";
+    showToast(`Verbindungsfehler: ${msg}`, "error");
+    throw new Error(msg);
+  }
+
+  if (!res.ok) {
+    let body: any;
+    try { body = await res.json(); } catch {}
+    const msg = body?.message || `HTTP ${res.status}`;
+    showToast(msg, "error");
+    const err = new Error(msg) as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+
+  return res.text();
+}
+
 export const api = {
-  get: (endpoint: string) => request(endpoint, { method: "GET" }),
-  post: (endpoint: string, body: any) => request(endpoint, { method: "POST", body }),
+  get: (endpoint: string, body?: any, extra?: any) => request(endpoint, { method: "GET", body, ...extra }),
+  post: (endpoint: string, body: any, extra?: any) => request(endpoint, { method: "POST", body, ...extra }),
   patch: (endpoint: string, body: any) => request(endpoint, { method: "PATCH", body }),
   del: (endpoint: string) => request(endpoint, { method: "DELETE" }),
+  getText: (endpoint: string, extra?: any) => requestText(endpoint, { method: "GET", ...extra }),
 };

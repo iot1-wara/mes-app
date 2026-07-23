@@ -7,7 +7,7 @@ import AlarmsPage from "./pages/Alarms";
 import TracesPage from "./pages/Traces";
 import OrdersPage from "./pages/Orders";
 import EdgePage from "./pages/Edge";
-import { api, setAuthToken, logoutUser, getAuthToken } from "./api/client";
+import { api, setAuthToken, logoutUser, getAuthToken, setRenderCallback, setUserState } from "./api/client";
 
 const publicPaths = ["/auth/login", "/auth/register"];
 

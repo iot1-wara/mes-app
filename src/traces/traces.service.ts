@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { TraceEntity } from './trace.entity';
-import type { CreateTraceDto } from './trace.dto';
+import type { CreateTraceDto, TraceCategoryType } from './trace.dto';
 
 @Injectable()
 export class TracesService {
@@ -23,8 +23,21 @@ export class TracesService {
     return this.tracesRepo.save(trace);
   }
 
-  async findAll(): Promise<TraceEntity[]> {
-    return this.tracesRepo.find({ order: { collected_at: 'DESC' }, take: 500 });
+  async findAll(opts?: {
+    machine_id?: string;
+    category?: TraceCategoryType;
+    key_data_point?: string;
+    value_min?: number;
+    value_max?: number;
+    take?: number;
+  }): Promise<TraceEntity[]> {
+    const qb = this.tracesRepo.createQueryBuilder('trace');
+    if (opts?.machine_id) qb.andWhere('trace.machine_id = :machineId', { machineId: opts.machine_id });
+    if (opts?.category) qb.andWhere('trace.category = :category', { category: opts.category });
+    if (opts?.key_data_point) qb.andWhere('trace.key_data_point ILIKE :keyDp', { keyDp: `%${opts.key_data_point}%` });
+    if (opts?.value_min != null) qb.andWhere('trace.value >= :valMin', { valMin: opts.value_min });
+    if (opts?.value_max != null) qb.andWhere('trace.value <= :valMax', { valMax: opts.value_max });
+    return qb.orderBy('trace.collected_at', 'DESC').limit(opts?.take || 500).getMany();
   }
 
   async findOne(id: string): Promise<TraceEntity> {
