@@ -90,11 +90,9 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 3.4 | Implement retention policies (keep raw data 90 days, roll up to 1-min averages for 1 year) | High | 2 days | ✅ done (hourly rollup + dashboard aggregate with refresh policies) |
 | 3.5 | Add chunking configuration (daily chunks with automatic compression) | Medium | 1 day | ✅ done (via migration service) |
 | 3.6 | Benchmarks: measure write throughput before/after migration | High | 2–3 hrs | ✅ done (`GET /data-collection/benchmark` endpoint) |
-| 3.7 | Update all documentation referencing DB schema (architecture.md, deploy.md, onboarding.md) | Medium | 1 day | ⬜ pending |
+| 3.7 | Update all documentation referencing DB schema (architecture.md, deploy.md, onboarding.md) | Medium | 1 day | ✅ done |
 
-**Phase 3 completion: 6/7 — Only Task 3.7 documentation update remaining.**
-
----
+**Phase 3 completion: 7/7 — All tasks done!** 🎉
 
 ### Phase 4 — Production Workflows _(Weeks 13–16)_
 
