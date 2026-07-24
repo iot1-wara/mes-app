@@ -128,7 +128,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
             <div>
               <h1 className="text-[var(--text-4xl-size)] leading-[var(--text-4xl-line)] font-bold text-neutral-black">Dashboard</h1>
-              <p className="text-[var(--text-sm-size)] leading-[var(--text-sm-line)] text-neutral-mid mt-0.5">Produktionsuebersicht in Echtzeit</p>
+              <p className="text-[var(--text-sm-size)] leading-[var(--text-sm-line)] text-neutral-mid mt-0.5">Produktionsübersicht in Echtzeit</p>
             </div>
             <div className="flex items-center gap-3">
               {["24h", "7d", "30d"].map((r) => (

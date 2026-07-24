@@ -30,6 +30,24 @@ Alle bedeutenden Änderungen an diesem Projekt werden in diesem Dokument dokumen
 
 ---
 
+## [1.5.0] — Unreleased (Phase 7: Notifications & Advanced Features)
+
+### Added
+- **Multi-channel alert notifications**: email (`email.service.ts`), push (`push.service.ts`), MQTT (`mqtt-alert.service.ts`) dispatch via event bus
+- **Alert rules engine**: configurable thresholds per machine/metric with interval-based evaluation (`@nestjs/schedule` cron) — `alert-rule.entity.ts`, `alert-rules-engine.service.ts`, CRUD API at `/api/alert-rules/*`
+- **Shift management**: shift types (day/swing/night), supervisor tracking, production reports per shift/day (`shift.entity.ts`, `/api/shifts/*`)
+- **Alarm dispatch endpoint**: `POST /alarms/dispatch/:id` — publish to MQTT + EventBus with channel routing
+- **AlarmEntity expanded**: new columns `rule_id`, `channel`, `recipient`, `delivery_status`
+- **AlarmsNotificationListener**: subscribes to EventBus events and routes notifications via email/push/MQTT
+- **i18n support (DE/EN)**: frontend translations, language switcher in Sidebar, `useLang` hook with localStorage persistence
+- **EdgeGatewayModule export**: `MqttGatewayService` now exported for cross-module dependency injection
+
+### Changed
+- **AlarmsService**: removed direct MqttGatewayService dependency — uses EventBus events instead (avoids circular deps)
+- **EventBus-driven architecture**: all new modules communicate via event bus for loose coupling
+
+---
+
 ## [1.4.0] — Unreleased (Infrastructure + Production Stack)
 
 ### Added

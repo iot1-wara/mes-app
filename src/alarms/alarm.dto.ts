@@ -18,6 +18,22 @@ export class CreateAlarmDto {
   @IsOptional()
   @IsString()
   source?: string;
+
+  @IsOptional()
+  @IsUUID()
+  rule_id?: string;
+
+  @IsOptional()
+  @IsEnum(['in_app', 'email', 'push', 'mqtt'])
+  channel?: string;
+
+  @IsOptional()
+  @IsString()
+  recipient?: string;
+
+  @IsOptional()
+  @IsEnum(['pending', 'sending', 'sent', 'failed'])
+  delivery_status?: string;
 }
 
 export class UpdateAlarmDto {
@@ -31,4 +47,8 @@ export class UpdateAlarmDto {
 
   @IsOptional()
   acknowledged_at?: Date;
+
+  @IsOptional()
+  @IsEnum(['pending', 'sending', 'sent', 'failed'])
+  delivery_status?: string;
 }

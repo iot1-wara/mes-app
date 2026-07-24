@@ -75,7 +75,7 @@ export default function EdgePage() {
         {health && (
           <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${health.ok ? "bg-status-bg-success text-status-success" : "bg-status-bg-error text-status-error"}`}>
             <span>{health.ok ? "✅" : "❌"}</span>
-            {health.ok ? "Edge Gateway verfuegbar" : "Edge Gateway nicht verfuegbar"}
+            {health.ok ? "Edge Gateway verfügbar" : "Edge Gateway nicht verfügbar"}
           </div>
         )}
 
@@ -111,7 +111,7 @@ export default function EdgePage() {
         <div className="bg-white rounded-lg shadow-card border border-neutral-200 p-5">
           <h3 className="text-sm font-semibold text-neutral-700 mb-3">Logs</h3>
           <pre className="text-xs bg-neutral-50 rounded-md px-4 py-3 font-mono text-neutral-600 leading-relaxed overflow-auto max-h-48 whitespace-pre-wrap">
-            {logs.join("\n") || "Keine Logs verfuegbar..."}
+            {logs.join("\n") || "Keine Logs verfügbar..."}
           </pre>
         </div>
 

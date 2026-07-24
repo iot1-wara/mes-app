@@ -38,4 +38,10 @@ export class AlarmsController {
 
   @Get('stats/active-count')
   getActiveAlarmCount() { return this.alarmsService.setActiveCount(); }
+
+  @Post('dispatch/:id')
+  @HttpCode(HttpStatus.OK)
+  dispatchAlarm(@Param('id') id: string) {
+    return this.alarmsService.dispatch(id);
+  }
 }

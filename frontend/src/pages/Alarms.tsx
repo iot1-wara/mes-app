@@ -14,6 +14,30 @@ export default function AlarmsPage() {
     api.get("/alarms").then((d) => {
       setAlarms(Array.isArray(d) ? d : []);
     }).finally(() => setLoading(false));
+
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/edge/ws`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: 'subscribe', topic: 'alarms' }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'alarm' || msg.event === 'alarm.triggered') {
+          const alarmData = msg.alarm || msg;
+          setAlarms(prev => [alarmData, ...prev]);
+          showToast(`[${alarmData.severity?.toUpperCase() || 'NEW'}] ${alarmData.message || alarmData.body}`, 'warning');
+        } else if (msg.type === 'update' && msg.topic === 'alarms') {
+          api.get("/alarms").then((d) => setAlarms(Array.isArray(d) ? d : []));
+        }
+      } catch {}
+    };
+
+    socket.onclose = () => {};
+
+    return () => { if (socket.readyState !== WebSocket.CLOSED) socket.close(); };
   }, []);
 
   const filtered = filter === "all" ? alarms : alarms.filter((a) => (a.severity||"").toLowerCase() === filter.toLowerCase());
@@ -58,7 +82,7 @@ export default function AlarmsPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("Alarm wirklich loeschen?")) return;
+    if (!confirm("Alarm wirklich löschen?")) return;
     try {
       await api.del(`/alarms/${id}`);
       showToast("Alarm deleted", "success");
@@ -73,7 +97,7 @@ export default function AlarmsPage() {
       <main className="p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Alarme</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Ubersicht aller Alarme</p>
+          <p className="text-sm text-neutral-500 mt-0.5">Übersicht aller Alarme</p>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -90,7 +114,7 @@ export default function AlarmsPage() {
           ))}
           <div className="ml-auto flex gap-2">
             <button onClick={selectAll} className="px-3 py-2 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50">
-              {selected.size === filtered.length && filtered.length > 0 ? "Alle abwahlen" : "Alle waehlen"}
+              {selected.size === filtered.length && filtered.length > 0 ? "Alle abwählen" : "Alle wählen"}
             </button>
             {selected.size > 0 && (
               <button onClick={handleBulkAcknowledge} className="px-3 py-2 text-xs font-medium text-white bg-status-success rounded-lg hover:bg-[var(--color-status-success-dark)]">

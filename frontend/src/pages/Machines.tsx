@@ -16,7 +16,7 @@ export default function MachinesPage() {
   }, []);
 
   function handleDelete(id: string) {
-    if (!confirm("Station wirklich loeschen?")) return;
+    if (!confirm("Station wirklich löschen?")) return;
     api.del("/machines/" + id).then(() => {
       setMachines((prev) => prev.filter((m) => m.id !== id));
     }).catch(() => {});

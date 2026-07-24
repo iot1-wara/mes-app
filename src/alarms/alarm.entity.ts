@@ -19,6 +19,18 @@ export class AlarmEntity {
   @Column({ nullable: true })
   source?: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  rule_id?: string;
+
+  @Column({ type: 'enum', enum: ['in_app', 'email', 'push', 'mqtt'], default: 'in_app' })
+  channel!: string;
+
+  @Column({ type: 'text', nullable: true })
+  recipient?: string;
+
+  @Column({ type: 'enum', enum: ['pending', 'sending', 'sent', 'failed'], default: 'pending' })
+  delivery_status!: string;
+
   @Column({ type: 'timestamp', nullable: true })
   acknowledged_at?: Date;
 

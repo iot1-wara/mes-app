@@ -6,6 +6,7 @@ import MachinesPage from "./pages/Machines";
 import AlarmsPage from "./pages/Alarms";
 import TracesPage from "./pages/Traces";
 import OrdersPage from "./pages/Orders";
+import CarriersPage from "./pages/Carriers";
 import EdgePage from "./pages/Edge";
 import { api, setAuthToken, logoutUser, getAuthToken, setRenderCallback, setUserState } from "./api/client";
 import { I18nProvider } from "./components/I18nProvider";
@@ -60,6 +61,7 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="machines/*" element={<MachinesPage />} />
                 <Route path="orders/*" element={<OrdersPage />} />
+                <Route path="carriers/*" element={<CarriersPage />} />
                 <Route path="alarms/*" element={<AlarmsPage />} />
                 <Route path="traces/*" element={<TracesPage />} />
                 <Route path="edge/*" element={<EdgePage />} />

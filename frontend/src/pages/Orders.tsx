@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import StatCard from "../components/StatCard";
 import { api } from "../api/client";
 
@@ -26,7 +26,7 @@ export default function OrdersPage() {
   };
 
   function handleDelete(id: string) {
-    if (!confirm("Auftrag wirklich loeschen?")) return;
+    if (!confirm("Auftrag wirklich löschen?")) return;
     api.del("/orders/" + id).then(() => refreshOrders()).catch(() => {});
   }
 
@@ -109,23 +109,18 @@ export default function OrdersPage() {
     on_hold: "bg-accent-lilac-bg text-brand-lilac"
   };
 
-  return (
-    <div className="min-h-screen bg-neutral-50">
-      <main className="p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Auftraege</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Verwaltung aller Produktionsauftraege</p>
-        </div>
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <main className="p-6 space-y-6">
+          <h1 className="text-2xl font-bold text-neutral-900">Aufträge</h1>
+          <p className="text-sm text-neutral-mid mb-6">Verwaltung aller Produktionsaufträge</p>
 
-        <div className="grid grid-cols-6 gap-4" style={{ width: 'fit-content' }}>
-          <StatCard label="Alle" value={String(stats?.total ?? orders.length)} icon="" />
-          <StatCard label="Pending" value={String(stats?.pending ?? orders.filter((o) => o.status === "pending").length)} icon=""/>
-          <StatCard label="Released" value={String(stats?.released ?? '0')} icon=""/><StatCard label="In Progress" value={String(stats?.in_progress ?? orders.filter((o) => o.status === "in_progress").length)} icon=""/>
-          <StatCard label="Completed" value={String(stats?.completed ?? orders.filter((o) => o.status === "completed").length)} icon=""/>
-          <StatCard label="On Hold" value={String(stats?.on_hold ?? orders.filter((o) => o.status === "on_hold").length)} icon=""/>
-        </div>
+          <div className="flex gap-3">
+            <button onClick={() => { setShowModal(true); setForm({ id: null, name: "", priority: 5, machine_id: "", operation: "", quantity: 1 }); }} className="bg-brand-primary text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--color-brand-primary-dark)] active:bg-[#b96306] transition-colors">
+              + Neuer Auftrag
+            </button>
+          </div>
 
-        <div className="flex justify-between items-center">
           <div className="flex gap-1.5" role="group">
             {["all", "pending", "released", "in_progress", "completed", "cancelled", "on_hold"].map((s) => (
               <button key={s} onClick={() => setFilter(s)} className={`px-3.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${filter === s ? "bg-brand-primary text-white" : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50"}`}>
@@ -133,17 +128,7 @@ export default function OrdersPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowCarrierModal(true)} className="bg-brand-accent text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[#b98cff] transition-colors">
-              + Neuer Werktraeger
-            </button>
-            <button onClick={() => { setShowModal(true); setForm({ id: null, name: "", priority: 5, machine_id: "", operation: "", quantity: 1 }); }} className="bg-brand-primary text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--color-brand-primary-dark)] transition-colors">
-              + Neuer Auftrag
-            </button>
-          </div>
-        </div>
 
-        {filtered.length > 0 ? (
           <table className="w-full bg-white rounded-[var(--radius-lg)] overflow-hidden shadow-card border border-neutral-border">
             <thead>
               <tr className="bg-neutral-stroke">
@@ -153,10 +138,10 @@ export default function OrdersPage() {
                 <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Operation</th>
                 <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Fortschritt</th>
                 <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Status</th>
-                <th className="px-6 py-3.5 text-right text-xs uppercase tracking-wider font-semibold text-neutral-mid">Aktionen</th>
+            <th className="px-6 py-3.5 text-right text-xs uppercase tracking-wider font-semibold text-neutral-mid">Aktionen</th>
               </tr>
             </thead>
-            <tbody>
+          <tbody>
               {filtered.map((o) => {
                 const progress = o.quantity > 0 ? ((o.completed_quantity ?? 0) / o.quantity * 100).toFixed(0) : '0';
                 return (
@@ -227,7 +212,7 @@ export default function OrdersPage() {
                               </button>
                               {o.status !== 'completed' && o.status !== 'in_progress' && (
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(o.id); setOpenDropdown(null); }} className="w-full text-left px-3 py-2 text-sm text-status-error hover:bg-status-bg-error transition-colors">
-                                  Auftrag loeschen
+                                  Auftrag lösch
                                 </button>
                               )}
                             </div>
@@ -239,11 +224,12 @@ export default function OrdersPage() {
                 })}
               </tbody>
             </table>
-        ) : (
-          <p className="text-center text-neutral-400 py-12 text-sm">Keine Auftraege gefunden</p>
-        )}
+          
+          {filtered.length === 0 ? (
+            <p className="text-center text-neutral-400 py-12 text-sm">Keine Aufträge gefunden</p>
+          ) : null}
 
-        {showCarrierModal && (
+          {showCarrierModal && (
           <div onClick={() => setShowCarrierModal(false)} className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
             <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] w-full max-w-lg p-6">
               <h2 className="text-lg font-bold text-neutral-900 mb-4">Neuer Werktraeger</h2>
@@ -287,7 +273,7 @@ export default function OrdersPage() {
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1.5">Maschine</label>
                   <select value={form.machine_id} onChange={(e) => setForm((f) => ({ ...f, machine_id: e.target.value }))} required className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/30">
-                    <option value="">-- Waehle Maschine --</option>
+                    <option value="">-- Maschine wählen --</option>
                     {machines.map((m) => (
                       <option key={m.id} value={m.id}>{m.name || m.machineName}</option>
                     ))}
@@ -303,7 +289,7 @@ export default function OrdersPage() {
                     <input type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: Number(e.target.value) }))} min="1" required className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/30" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Prioritaet</label>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Priorität</label>
                     <select value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))} className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/30">
                       {[1,2,3,4,5].map((p) => (
                         <option key={p} value={p}>{p}</option>
@@ -327,5 +313,6 @@ export default function OrdersPage() {
     </div>
   );
 }
+
 
 

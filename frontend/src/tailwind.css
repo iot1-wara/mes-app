@@ -33,6 +33,7 @@
    --color-accent-lilac-bg:  #faf5ff;
    --color-brand-primary-dark: #d97706;  /* Orange-Dunkel für hover */
    --color-status-error-dark:  #b91c1c;
+   --color-brand-lilac-dark:   #8a63be;  /* Lilac-Dunkel für hover */
 }
 
 @utility shadow-card {
