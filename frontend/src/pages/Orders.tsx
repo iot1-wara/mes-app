@@ -89,16 +89,23 @@ export default function OrdersPage() {
 
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
   useEffect(() => {
-    api.get("/orders/carriers/list").then((d) => { if (Array.isArray(d)) setCarriers(d); }).catch(() => {});
-  }, []);
+    if (openDropdown) {
+      const handler = () => setOpenDropdown(null);
+      window.addEventListener('click', handler);
+      return () => window.removeEventListener('click', handler);
+    }
+  }, [openDropdown]);
+
 
   const statusColors: Record<string, string> = {
     pending: "bg-status-bg-warning text-status-warning",
-    released: "bg-brand-lilac-bg text-brand-lilac",
+    released: "bg-accent-lilac-bg text-brand-lilac",
     in_progress: "bg-status-bg-info text-status-info",
     completed: "bg-status-bg-success text-status-success",
-    cancelled: "bg-neutral-200 text-neutral-500",
+    cancelled: "bg-neutral-stroke text-neutral-mid",
     on_hold: "bg-accent-lilac-bg text-brand-lilac"
   };
 
@@ -137,92 +144,101 @@ export default function OrdersPage() {
         </div>
 
         {filtered.length > 0 ? (
-          <div className="bg-white rounded-lg shadow-card border border-neutral-200 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-200">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">ID</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Maschine</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Operation</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Fortschritt</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-neutral-500 uppercase tracking-wider">Aktionen</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {filtered.map((o) => {
-                  const progress = o.quantity > 0 ? ((o.completed_quantity ?? 0) / o.quantity * 100).toFixed(0) : '0';
-                  return (
-                    <tr key={o.id} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-5 py-3.5 text-xs font-mono text-neutral-500">{(o.id||"").substring(0,8)}</td>
-                      <td className="px-5 py-3.5 text-sm text-neutral-800 font-medium">{o.name}</td>
-                      <td className="px-5 py-3.5 text-sm text-neutral-600">{machines.find((m) => m.id === o.machine_id)?.name || o.machine_id?.substring(0,8) || "-"}</td>
-                      <td className="px-5 py-3.5 text-sm text-neutral-600">{o.operation || "-"}</td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-neutral-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-brand-primary transition-all" style={{ width: `${progress}%`}} />
-                          </div>
-                          <span className="text-xs text-neutral-500">{o.completed_quantity ?? 0}/{o.quantity}</span>
+          <table className="w-full bg-white rounded-[var(--radius-lg)] overflow-hidden shadow-card border border-neutral-border">
+            <thead>
+              <tr className="bg-neutral-stroke">
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">ID</th>
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Name</th>
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Maschine</th>
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Operation</th>
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Fortschritt</th>
+                <th className="px-6 py-3.5 text-left text-xs uppercase tracking-wider font-semibold text-neutral-mid">Status</th>
+                <th className="px-6 py-3.5 text-right text-xs uppercase tracking-wider font-semibold text-neutral-mid">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((o) => {
+                const progress = o.quantity > 0 ? ((o.completed_quantity ?? 0) / o.quantity * 100).toFixed(0) : '0';
+                return (
+                  <tr key={o.id} className="border-b border-neutral-stroke hover:bg-neutral-stroke/50 transition-colors">
+                    <td className="px-6 py-4 text-xs font-mono text-neutral-mid">{(o.id||"").substring(0,8)}</td>
+                    <td className="px-6 py-4 text-base text-neutral-dark font-medium">{o.name}</td>
+                    <td className="px-6 py-4 text-base text-neutral-dark">{machines.find((m) => m.id === o.machine_id)?.name || o.machine_id?.substring(0,8) || "-"}</td>
+                    <td className="px-6 py-4 text-base text-neutral-dark">{o.operation || "-"}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-neutral-stroke rounded-full overflow-hidden">
+                          <div className="h-full bg-brand-primary transition-all" style={{ width: `${progress}%`}} />
                         </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${statusColors[o.status] || "bg-neutral-100"}`}>
-                          {o.status}
-                        </span>
-                        {o.sps_flags && Object.keys(o.sps_flags).length > 0 && (
-                          <div className="mt-1 flex gap-0.5">
-                            {Object.entries(o.sps_flags).map(([key, val]: [string, any]) => (
-                              <span key={key} title={`${key}: ${String(val)}`} className={`w-2 h-2 rounded-full ${val ? 'bg-status-success' : 'bg-neutral-300'}`} />
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {TRANSITION_MAP[o.status]?.includes('released') && (
-                          <button onClick={() => handleStatusChange(o.id, "released")} className="mx-1 px-3 py-1.5 text-xs font-medium text-brand-lilac bg-white border border-brand-accent rounded-md hover:bg-accent-lilac-bg transition-colors">
-                            Release
+                        <span className="text-xs text-neutral-mid">{o.completed_quantity ?? 0}/{o.quantity}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[o.status] || "bg-neutral-100 text-neutral-mid"}`}>
+                        {o.status}
+                      </span>
+                      {o.sps_flags && Object.keys(o.sps_flags).length > 0 && (
+                        <div className="mt-1 flex gap-0.5">
+                          {Object.entries(o.sps_flags).map(([key, val]: [string, any]) => (
+                            <span key={key} title={`${key}: ${String(val)}`} className={`w-2 h-2 rounded-full ${val ? 'bg-status-success' : 'bg-neutral-light'}`} />
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="relative inline-block">
+                          <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === o.id ? null : o.id); }} className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs uppercase tracking-wide hover:bg-neutral-stroke">
+                            Aktionen
                           </button>
-                        )}
-                        {TRANSITION_MAP[o.status]?.includes('in_progress') && (
-                          <button onClick={() => handleStatusChange(o.id, "in_progress")} className="mx-1 px-3 py-1.5 text-xs font-medium text-status-info border border-status-info bg-white rounded-md hover:bg-status-bg-success transition-colors">
-                            Start
-                          </button>
-                        )}
-                        {TRANSITION_MAP[o.status]?.includes('on_hold') && (
-                          <button onClick={() => handleStatusChange(o.id, "on_hold")} className="mx-1 px-3 py-1.5 text-xs font-medium text-status-warning border border-status-warning bg-white rounded-md hover:bg-status-bg-warning transition-colors">
-                            Hold
-                          </button>
-                        )}
-                        {TRANSITION_MAP[o.status]?.includes('completed') && (
-                          <button onClick={() => handleStatusChange(o.id, "completed")} className="mx-1 px-3 py-1.5 text-xs font-medium text-status-success border border-status-success bg-white rounded-md hover:bg-status-bg-success transition-colors">
-                            Finish
-                          </button>
-                        )}
-                        {TRANSITION_MAP[o.status]?.includes('cancelled') && (
-                          <button onClick={() => handleStatusChange(o.id, "cancelled")} className="mx-1 px-3 py-1.5 text-xs font-medium text-status-error border border-status-error bg-white rounded-md hover:bg-status-bg-error transition-colors">
-                            Cancel
-                          </button>
-                        )}
-                        {o.status === 'released' && (
-                          <button onClick={() => createCarrier(o.id)} disabled={loadingCarrier === o.id} className="mx-1 px-2 py-1.5 text-xs font-medium bg-accent-lilac text-brand-lilac border border-brand-lilac rounded-md hover:bg-brand-lilac hover:text-white transition-colors">
-                            {loadingCarrier === o.id ? 'Erstelle...' : '+ Werktraeger'}
-                          </button>
-                        )}
-                        <button onClick={() => openEdit(o)} className="mx-1 px-3 py-1.5 text-xs font-medium text-neutral-dark bg-neutral-stroke rounded-md hover:bg-neutral-border transition-colors">
-                            Edit
-                          </button>
-                        <button onClick={() => handleDelete(o.id)} className="ml-2 px-3 py-1.5 text-xs font-medium text-white bg-status-error rounded-md hover:bg-[var(--color-status-error-dark)] transition-colors" disabled={o.status === 'completed' || o.status === 'in_progress'}>
-                          x
-                        </button>
+                          {openDropdown === o.id && (
+                            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 w-56 bg-white border border-neutral-border rounded-lg shadow-card z-20 py-1">
+                              {TRANSITION_MAP[o.status]?.includes('released') && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(o.id, "released"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  Release
+                                </button>
+                              )}
+                              {TRANSITION_MAP[o.status]?.includes('in_progress') && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(o.id, "in_progress"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  Start
+                                </button>
+                              )}
+                              {TRANSITION_MAP[o.status]?.includes('on_hold') && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(o.id, "on_hold"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  Hold
+                                </button>
+                              )}
+                              {TRANSITION_MAP[o.status]?.includes('completed') && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(o.id, "completed"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  Complete
+                                </button>
+                              )}
+                              {TRANSITION_MAP[o.status]?.includes('cancelled') && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(o.id, "cancelled"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  Cancel
+                                </button>
+                              )}
+                              {o.status === 'released' && (
+                                <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); createCarrier(o.id); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                  + Werktraeger erstellen
+                                </button>
+                              )}
+                              <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); openEdit(o); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                Auftrag editieren
+                              </button>
+                              {o.status !== 'completed' && o.status !== 'in_progress' && (
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(o.id); setOpenDropdown(null); }} className="w-full text-left px-3 py-2 text-sm text-status-error hover:bg-status-bg-error transition-colors">
+                                  Auftrag loeschen
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
         ) : (
           <p className="text-center text-neutral-400 py-12 text-sm">Keine Auftraege gefunden</p>
         )}
@@ -311,3 +327,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+

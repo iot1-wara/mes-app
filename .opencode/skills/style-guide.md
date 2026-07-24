@@ -200,9 +200,119 @@ import StatCard from "@/components/StatCard";
 | **Danger**      | `bg-status-error text-white font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-status-error-dark)] active:bg-[#991b1b] transition-colors` | Löschen, kritisch                |
 | **Ghost**       | `text-neutral-mid hover:text-neutral-black hover:bg-neutral-stroke font-medium px-3 py-1.5 rounded-md transition-colors` | Minimale Sichtbarkeit            |
 
+### Action Groups in Tabellenzellen
+
+Wenn pro Zeile **mehrere Actions** vorhanden sind, niemals alle buttons inline nebeneinander rendern — das erzeugt zu viel horizontale Breite. Verwende stattdessen folgendes Pattern:
+
+- **Eine primäre Aktion** als vollständiger Button (Primary, Secondary oder Danger je nach Kontext)
+- **Edit / Delete / weitere Actions** als `<span><button>…<button></span>` mit `display:inline-flex;gap:12px` und den Ghost-Button-Varianten für minimale Sichtbarkeit
+- **Mehr als 4 Actions insgesamt**: **"Aktionen" Textlink + Dropdown** das alle weiteren Actions enthält
+
+#### Pattern A – Kompakte Icon Buttons (2–4 Actions)
+
+```tsx
+// ✅ Richtig – Eine primäre Action + Ghost buttons
+<span className="inline-flex items-center justify-end gap-3">
+  <button className="bg-brand-primary text-white font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-brand-primary-dark)] active:bg-[#b96306] transition-colors text-sm">
+    Release
+  </button>
+  <button onClick={() => openEdit(o)} className="text-neutral-mid hover:text-neutral-black hover:bg-neutral-stroke font-medium px-3 py-1.5 rounded-md transition-colors text-sm">
+    Edit
+  </button>
+  <button onClick={() => handleDelete(o.id)} className="bg-status-error text-white font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-status-error-dark)] active:bg-[#991b1b] transition-colors text-sm">
+    Delete
+  </button>
+</span>
+
+// ✅ Kompakte Ghost Textlinks (nur Edit/Delete als kleine Links)
+<span className="inline-flex items-center justify-end gap-3 border-l border-neutral-border pl-3">
+  <button onClick={() => openEdit(o)} className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs hover:bg-neutral-stroke">Edit</button>
+  <button onClick={() => handleDelete(o.id)} className="text-neutral-mid hover:text-status-error font-medium px-1 py-0.5 rounded-md transition-colors text-xs hover:bg-status-bg-error">Delete</button>
+</span>
+```
+
+#### Pattern B – "Aktionen" Dropdown Toggle (empfohlen für ≥ 2 Actions)
+
+Das empfohlene Pattern fuer Tabellen mit vielen Actions pro Zeile: ein einzelner **"Aktionen"** Textlink der alaue weiteren Actions in einem Dropdown offeu. **Keine Icons**, alles als Text wie im Rest des Projekts.
+
+```tsx
+// ✅ Richtig – Alle Actions im Dropdown
+<div className="relative inline-block">
+  <button
+    onClick={() => setOpen(!open)}
+    className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs uppercase tracking-wide hover:bg-neutral-stroke"
+    title="Aktionen"
+  >Aktionen</button>
+  {open && (
+    <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 w-56 bg-white border border-neutral-border rounded-lg shadow-card z-20 py-1">
+      <button className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">Release</button>
+      <button className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">Start</button>
+      <button className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">Hold</button>
+      <button onClick={handleEdit} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">Auftrag editieren</button>
+      <button onClick={handleDelete} className="w-full text-left px-3 py-2 text-sm text-status-error hover:bg-status-bg-error transition-colors">Auftrag loeschen</button>
+    </div>
+  )}
+</div>
+```
+
+#### Pattern C – Split Button (komplexeste Variante, fuer status-abhaengige Actions)
+
+```tsx
+// Hauptaktion als Primary Button + Chevron-Menu fuer weitere Options
+<div className="inline-flex items-center gap-1">
+  <button className="bg-brand-primary text-white font-medium px-4 py-2 rounded-l-lg hover:bg-[var(--color-brand-primary-dark)] transition-colors text-sm">
+    {primaryLabel}
+  </button>
+  <button className="bg-brand-primary text-white px-2 py-2 rounded-r-lg hover:bg-[var(--color-brand-primary-dark)] transition-colors text-sm border-l border-white/20">
+    Menu
+  </button>
+</div>
+```
+
+#### Table Action Rules
+
+| Regel | Wert |
+|-------|------|
+| TD padding right-aligned | `px-6 py-4 text-right` |
+| Span wrapper | `display:inline-flex;gap:12px;justify-content:flex-end` (= Tailwind `inline-flex items-center gap-3 justify-end`) |
+| Dropdown Toggle | Textlabel "Aktionen", Panel = `bg-white border border-neutral-border rounded-lg shadow-card z-20` |
+| Keine Icons im Dropdown | Alle Labels als Text, keine Unicode-Symbole |
+| Keine inline-Styles | Alle Farben via Token-Klassen |
+
+```tsx
+// ❌ Falsch – alle Actions als gleiche Buttons nebeneinander (zu viel Breite)
+<span class="flex gap-2">
+  <button>Start</button>
+  <button>Hold</button>
+  <button>Release</button>
+  <button>Finish</button>
+  <button>Cancel</button>
+  <button>Edit</button>
+  <button>Delete</button>
+</span>
+
+// ✅ Empfohlen: Aktionen-Dropdown (Pattern B)
+<td class="px-6 py-4 text-right">
+  <div className="relative inline-block">
+    <button>Aktionen</button>
+    <!-- Dropdown mit Release, Start, Hold, Edit, Delete -->
+  </div>
+</td>
+```
+
+#### Button-Varianten in Action-Kontext
+
+| Kontext | Variante | Beispiel |
+|---------|----------|----------|
+| Status-Transition (create/save) als direkte Action | Primary (`bg-brand-primary`) | Release, Start |
+| Status-Transition (pause/halt) als direkte Action | Secondary (`bg-neutral-stroke`) | Hold, Resume |
+| Status-Transition (destructive) als direkte Action | Danger (`bg-status-error`) | Cancel |
+| Edit | Ghost Textlink | Edit |
+| Delete | Ghost Textlink mit HoverError | Delete |
+
 ```tsx
 // ✅ Richtig
-<button className="bg-brand-primary text-white font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-brand-primary-dark)] transition-colors">
+<button className="bg-brand-primary text-white font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-brand-primary-dark)] active:bg-[#b96306] transition-colors">
   Neue Station
 </button>
 

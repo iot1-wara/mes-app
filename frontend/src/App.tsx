@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import MachinesPage from "./pages/Machines";
@@ -8,6 +8,7 @@ import TracesPage from "./pages/Traces";
 import OrdersPage from "./pages/Orders";
 import EdgePage from "./pages/Edge";
 import { api, setAuthToken, logoutUser, getAuthToken, setRenderCallback, setUserState } from "./api/client";
+import { I18nProvider } from "./components/I18nProvider";
 
 const publicPaths = ["/auth/login", "/auth/register"];
 
@@ -47,26 +48,28 @@ export default function App() {
   console.log("[App] auth state changed, re-rendering main layout");
 
   return (
-    <>
-      <ToastContainer />
-      <div className="h-screen w-screen flex overflow-hidden bg-neutral-50">
-        <Sidebar />
-        <main className="flex-1 flex flex-col gap-6 p-6 overflow-y-auto relative">
-          {authState && (
-            <Routes>
-              <Route path="/auth/*" element={<Navigate to="/" />} />
-              <Route path="/" element={<Dashboard />} />
-              <Route path="machines/*" element={<MachinesPage />} />
-              <Route path="orders/*" element={<OrdersPage />} />
-              <Route path="alarms/*" element={<AlarmsPage />} />
-              <Route path="traces/*" element={<TracesPage />} />
-              <Route path="edge/*" element={<EdgePage />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          )}
-        </main>
-      </div>
-    </>
+    <I18nProvider>
+      <>
+        <ToastContainer />
+        <div className="h-screen w-screen flex overflow-hidden bg-neutral-50">
+          <Sidebar />
+          <main className="flex-1 flex flex-col gap-6 p-6 overflow-y-auto relative">
+            {authState && (
+              <Routes>
+                <Route path="/auth/*" element={<Navigate to="/" />} />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="machines/*" element={<MachinesPage />} />
+                <Route path="orders/*" element={<OrdersPage />} />
+                <Route path="alarms/*" element={<AlarmsPage />} />
+                <Route path="traces/*" element={<TracesPage />} />
+                <Route path="edge/*" element={<EdgePage />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            )}
+          </main>
+        </div>
+      </>
+    </I18nProvider>
   );
 }
 
