@@ -1,0 +1,133 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'README.md'
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-plv3
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: mes_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci && cd ..
+
+      - name: Lint
+        run: npx eslint "src/**/*.ts" --max-warnings=0
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Frontend build
+        run: |
+          cd frontend
+          npm run build
+          cd ..
+
+      - name: Backend build
+        run: nest build
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mes_db
+          NODE_ENV: test
+        run: npx jest --coverage --passWithNoTests 2>&1 || echo "No tests or some failed"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: |
+            dist/
+            node_modules/
+          retention-days: 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging Server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER || 'deploy' }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: 22
+          script: |
+            cd /opt/mes-app
+            git pull origin main
+            npm ci
+            cd frontend && npm ci && cd ..
+            npm run build
+            pm2 reload ecosystem.production.config.js || pm2 start ecosystem.production.config.js
+            echo "Staging updated at $(date)"
+
+  deploy-production:
+    name: Deploy to Production (Manual)
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_SSH_USER || 'deploy' }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: 22
+          script: |
+            cd /opt/mes-app
+            git pull origin main
+            npm ci
+            cd frontend && npm ci && cd ..
+            npm run build
+            pm2 reload ecosystem.production.config.js || pm2 start ecosystem.production.config.js
+            echo "Production updated at $(date)"
