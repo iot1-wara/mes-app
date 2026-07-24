@@ -1,5 +1,5 @@
 ﻿import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
-import { OrdersService } from './orders.service';
+import {OrdersService} from './orders.service';
 import { CarrierService } from './carrier.service';
 import { MaterialsService } from './materials.service';
 import { MachineErrorsService } from './machine-errors.service';
@@ -30,10 +30,24 @@ export class OrdersController {
   getCarrier(@Param('id') id: string) { return this.carrierService.findOne(id); }
 
   @Patch('carriers/:id')
-  updateCarrier(@Param('id') id: string, @Body() dto: UpdateCarrierDto) { return this.carrierService.update(id, dto); }
+  updateCarrier(@Param('id') id: string, @Body() dto: UpdateCarrierDto) { 
+    return this.carrierService.update(id, dto as UpdateCarrierDto); 
+  }
 
   @Get('carriers/station/:stationId')
   getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
+
+  // === dbProcessData endpoint (Phase 9 MVP) ===
+  @Get('carriers/dbprocessdata')
+  getDbProcessData() { return this.carrierService.getDbProcessData(); }
+
+  @Get('carriers/next-resources')
+  getNextResources() { return this.carrierService.getNextResources(); }
+
+  @Post('carriers/:id/advance-step')
+  advanceStep(@Param('id') id: string, @Body() body: { next_resource_id?: number | null }) { 
+    return this.carrierService.advanceManual(id, body as Omit<AdvanceCarrierDto, 'iStepNo'>); 
+  }
 
   // --- Orders ---
   @Post()

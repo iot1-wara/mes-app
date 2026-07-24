@@ -5,6 +5,14 @@ import type { FindOptionsRelations, FindOptionsSelect } from 'typeorm';
 import { CarrierEntity } from './carrier.entity';
 import type { CreateCarrierDto, UpdateCarrierDto, AdvanceCarrierDto } from './carrier.dto';
 
+// Farb-Namen Mapper für iPar1 (Deckelfarbe) aus dbProcessData DB151
+export const DECKEL_FARBE_NAME: Record<number, string> = {
+  0: 'keine',
+  1: 'rot',
+  2: 'blau',
+  3: 'grune',
+};
+
 @Injectable()
 export class CarrierService {
   constructor(
@@ -15,14 +23,31 @@ export class CarrierService {
   async create(dto: CreateCarrierDto): Promise<CarrierEntity> {
     const carrier: any = new CarrierEntity();
     carrier.name = dto.name;
-    carrier.current_station_id = dto.current_station_id!;
-    carrier.next_resource_id = dto.next_resource_id!;
+    if (dto.current_station_id_alt) {
+      carrier.current_station_id = dto.current_station_id_alt.toString();
+    }
+    // Write dbProcessData fields directly to DB columns
+    carrier.iCarrierID = dto.iCarrierID ?? null;
+    carrier.iResourceID = dto.iResourceID ?? null;
+    carrier.iPar1 = dto.iPar1 ?? 0;
+    carrier.iPar2 = dto.iPar2 ?? 0;
+    carrier.iPar3 = dto.iPar3 ?? 0;
+    carrier.iPar4 = dto.iPar4 ?? 0;
+    carrier.partNumber = dto.partNumber ?? null;
+    carrier.lastProcessTimestamp = dto.lastProcessTimestamp ?? null;
+    // Fallback: write to legacy process_data JSONB as well for backward compat with UI
+    carrier.process_data = { 
+      iStepNo: dto.iStepNo, 
+      iResourceID: dto.iResourceID,
+      next_resource_id: dto.current_station_id_alt,
+    };
+
     carrier.order_id = dto.order_id;
     carrier.iStepNo = dto.iStepNo || 0;
     carrier.nextStepNo = dto.nextStepNo || 1;
     carrier.status = dto.status || 'idle' as const;
     carrier.handshake_flags = { xStart: false, xQryBusy: false, xAck: false };
-    carrier.process_data = { iStepNo: dto.iStepNo, next_resource_id: dto.next_resource_id as any };
+
     const saved = await this.carriersRepo.save(carrier);
     return saved as CarrierEntity;
   }
@@ -60,6 +85,7 @@ export class CarrierService {
       carrier.handshake_flags = { ...carrier.handshake_flags, xErrL0: true } as typeof carrier.handshake_flags;
     }
 
+    // Map all dbProcessData fields to entity columns
     Object.assign(carrier, dto);
     return this.carriersRepo.save(carrier);
   }
@@ -74,7 +100,7 @@ export class CarrierService {
       ...carrier.process_data,
       iStepNo: dto.iStepNo,
       next_resource_id: dto.next_resource_id as unknown as number | undefined,
-      step_description: dto.step_description,
+      step_description: dto.step_description || '',
     };
 
     return this.carriersRepo.save(carrier);
@@ -119,5 +145,101 @@ export class CarrierService {
       handshake: c.handshake_flags || {},
       status: c.status,
     }));
+  }
+
+  // === NEW: dbProcessData endpoint (Phase 9 MVP) ===
+
+  async getDbProcessData(): Promise<Array<{
+    carrierId: string;
+    name: string;
+    iCarrierID: number | null;
+    iStepNo: number;
+    iResourceID: number | null;
+    next_resource_id: number | null;
+    deckelfarbeName: string;
+    iPar2: number;  // rote Kugeln
+    iPar3: number;  // grune Kugeln
+    iPar4: number;  // blaue Kugeln
+    lastProcessTimestamp: Date | null;
+    partNumber?: string;
+    status: string;
+    handshake: Record<string, any>;
+    xAuto?: boolean;
+    xManual?: boolean;
+    xBusy?: boolean;
+    xReset?: boolean;
+  }>> {
+    const carriers = await this.getDbProcessDataRaw();
+
+    return carriers.map(c => ({
+      carrierId: c.id,
+      name: c.name,
+      iCarrierID: (c as any).i_carrier_id ?? null,
+      iStepNo: (c as any).i_step_no ?? 0,
+      iResourceID: (c as any).i_resource_id ?? null,
+      next_resource_id: (c as any).next_resource_id ?? null,
+      deckelfarbeName: DECKEL_FARBE_NAME[(c as any).i_par1 ?? 0] || `? (${(c as any).i_par1})`,
+      iPar2: (c as any).i_par2 ?? 0,
+      iPar3: (c as any).i_par3 ?? 0,
+      iPar4: (c as any).i_par4 ?? 0,
+      lastProcessTimestamp: (c as any).last_process_timestamp ?? null,
+      partNumber: (c as any).part_number,
+      status: c.status,
+      handshake: (c as any).handshake_flags || {},
+      xAuto: (c as any).x_auto,
+      xManual: (c as any).x_manual,
+      xBusy: (c as any).x_busy,
+      xReset: (c as any).x_reset,
+    }));
+  }
+
+  private async getDbProcessDataRaw(): Promise<any[]> {
+    try {
+      return await this.carriersRepo.query(
+        `SELECT id, name, i_step_no, next_step_no, current_station_id, 
+                i_carrier_id, i_resource_id, i_par1, i_par2, i_par3, i_par4,
+                part_number, last_process_timestamp, 
+                process_data, total_material_used_qty, status, created_at, updated_at,
+                COALESCE(handshake_flags->>'xStart', 'false') as x_start,
+                COALESCE(handshake_flags->>'xQryBusy', 'false') as x_qry_busy,
+                COALESCE(handshake_flags->>'xAck', 'false') as x_ack,
+                next_resource_id
+         FROM carriers 
+         WHERE status IN ('in_process', 'at_station', 'idle')
+         ORDER BY created_at DESC`
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  async getNextResources(): Promise<number[]> {
+    try {
+      const rows = await this.carriersRepo.query(
+        `SELECT DISTINCT i_resource_id FROM carriers WHERE i_resource_id IS NOT NULL ORDER BY i_resource_id`
+      );
+      return rows.map((r: any) => r.i_resource_id).filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  async advanceManual(id: string, dto: Omit<AdvanceCarrierDto, 'iStepNo'>): Promise<CarrierEntity> {
+    const carrier = await this.findOne(id);
+    
+    // Read current step from the carrier's process data (if available) or iStepNo
+    const currentStep = (carrier.process_data?.iStepNo ?? carrier.iStepNo) || 0;
+    const nextStep = currentStep + 1;
+
+    // Trigger OPC UA handshake
+    carrier.handshake_flags = { xStart: true, xQryBusy: false };
+    carrier.iStepNo = nextStep;
+    carrier.process_data = {
+      ...carrier.process_data,
+      iStepNo: nextStep,
+      next_resource_id: dto.next_resource_id as unknown as number | undefined,
+    };
+
+    return this.carriersRepo.save(carrier);
   }
 }

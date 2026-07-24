@@ -20,14 +20,41 @@ export class CarrierEntity {
   @Column({ nullable: true })
   current_station_id?: string;
 
+  // dbProcessData (DB151) direct mapping fields — matches SPS DB151 exactly
+  @Column({ type: 'int', nullable: true })
+  iCarrierID!: number | null;  // Int(128) from SPS — stored as INT with BigInt cast in SPS dispatcher
+
+  @Column({ type: 'int', nullable: true })
+  iResourceID!: number | null;  // Int(2) from SPS — target station (migrated from string to integer)
+
+  @Column({ type: 'int', default: 0 })
+  iPar1!: number;  // Deckelfarbe (0=keine, 1=R, 2=B, 3=G)
+
+  @Column({ type: 'int', default: 0 })
+  iPar2!: number;  // Anzahl rote Kugeln
+
+  @Column({ type: 'int', default: 0 })
+  iPar3!: number;  // Anzahl grüne Kugeln
+
+  @Column({ type: 'int', default: 0 })
+  iPar4!: number;  // Anzahl blaue Kugeln
+
+  // Mapped from sMES query fields (stMesQuery)
   @Column({ nullable: true })
-  next_resource_id?: string;
+  partNumber?: string;  // udiPNo — Part Number des Werkstücks
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastProcessTimestamp!: Date | null;  // ldtTimeStamp aus dbProcessData
 
   // OPC UA handshake flags (from MES → SPS interface)
   @Column({ type: 'jsonb', nullable: true })
   handshake_flags!: { xStart?: boolean; xQryBusy?: boolean; xAck?: boolean };
 
-  // dbProcessData routing params
+  // Fallback: sMES query state bits (xAuto/xManual/xBusy/xReset)
+  @Column({ type: 'jsonb', nullable: true, default: {} })
+  mes_state!: Record<string, any>;
+
+  // dbProcessData routing params (legacy fallback for dynamic fields)
   @Column({ type: 'jsonb', nullable: true })
   process_data!: {
     iStepNo?: number;
