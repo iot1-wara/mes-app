@@ -7,17 +7,49 @@ Alle bedeutenden Änderungen an diesem Projekt werden in diesem Dokument dokumen
 ## [Unreleased]
 
 ### Added
-- **Rate Limiting**: Global 100 req/min per IP via `@nestjs/throttler` (Task 1.6)
-- **Alarms CSV Export**: Backend endpoint + Frontend export button for downloading alarm data as CSV
-- **Alarms Bulk Endpoint**: `/alarms/bulk-acknowledge` REST endpoint for efficient batch acknowledgment
-- **Traces Advanced Filter**: Query params `key_data_point`, `value_min`, `value_max` with ILIKE partial match (Task 2.3)
-- **Traces Table Columns**: New columns for key_data_point and value display
+- **Infrastructure Management**: Development workflow, CI/CD pipeline, production deployment concept
+  - GitHub Actions CI/CD with test + staging auto-deploy (production requires manual approval) (`ci.yml`)
+  - Docker Compose infrastructure for dev: PostgreSQL/TimescaleDB + MQTT Mosquitto (`docker-compose.infra.yml`)
+  - Windows deployment script (deploy.ps1) — 5-step build pipeline
+  - Server provisioning guide (`docs/server-config.md`), infrastructure architecture doc (`docs/infrastructure.md`)
+- **Dev Server Script**: PowerShell-based dev server starter for Windows (`scripts/dev.ps1`, `scripts/dev.bat`)
+- **Mosquitto MQTT Broker Config**: Config file for development MQTT service (`scripts/mosquitto/config/mosquitto.conf`)
+- **Docker Dev Script**: Infrastructure lifecycle management wrapper (`scripts/docker/dev.sh`)
+
+### Changed
+- **package.json scripts**: `start:dev` now uses direct node path to nest.js binary (fixed Windows npm CLI resolution); `dev:front` uses direct vite path
+- **Backend start mechanism**: Replaced `nest` CLI command with `node node_modules/@nestjs/cli/bin/nest.js start --watch` for reliable cross-platform execution
 
 ### Fixed
-- TS type errors: `el.dataset.id` needs string, Orders quantity/priority need Number() coercion
-- Edge.tsx card rendering: fixed numeric value computations typed as strings
+- TypeScript errors across all backend files, frontend components, pages
+- Frontend full migration to TypeScript (all 15 JS/JSX → TS/TSX)
+- Router auth guard in App.tsx
+- Machines CSV menu toggle behavior
+- Dashboard layout: stations above carriers, scroll fix
+- Global API error handling with Toast notifications
 
-## [1.3.0] — 2026-07-23 (Phase 2 + Phase 3 Complete)
+---
+
+## [1.4.0] — Unreleased (Infrastructure + Production Stack)
+
+### Added
+- **Phase 3 complete**: Time-Series data architecture with TimescaleDB — hypertable creation, compression policies, retention, continuous aggregates, benchmark endpoint, hypetable info endpoint
+- **Phase 4 complete**: Order workflow states (pending → released → in_progress → completed/cancelled), Carrier entity + CRUD API, OPC UA Dispatcher service (xStart/xQryBusy handshake), Material consumption tracking, Error/downtime logging with Pareto stats
+- **Phase 5 part 1**: Dashboard page updated with Tailwind CSS styling, OEE trend/pareto/machines endpoints on backend (`/api/dashboard/*`)
+- **Backend module additions**: Dashboard service with OEE calc, Trend data, Pareto analysis
+
+### Changed
+- **Tech stack updates**: TypeScript compiler 5.7+ → 5.9; Tailwind v4 integration across all frontend pages
+- **Machines module**: Split into controller/service modules with proper DTO separation
+- **Orders module**: Full workflow state machine, carrier management, material consumption APIs
+- **Data-point entity**: Composite indexes for hypertable queries + Timescale extensions
+
+### Removed
+- Legacy error suppression in MQTT gateway (real error logging now in place)
+
+---
+
+## [1.3.0] — 2026-07-23 (Phase 2 Complete)
 
 ### Added
 - **Machines CSV Import**: Bulk import + template download (Task 2.5)

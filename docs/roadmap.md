@@ -1,6 +1,6 @@
 # MES Production Control System – Roadmap 2026
 
-_Document version: v1.1 — July 2026_
+_Document version: v1.3 — July 24, 2026_
 
 ---
 
@@ -17,7 +17,36 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 ---
 
-## 2a. Completed Tasks (v1.1 — July 2026)
+---
+
+## 2a. Completed (v1.4 — July 2026)
+
+### Phase 5 Dashboard Intelligence: Line Overview + KPIs
+
+| # | Task | Status | Release |
+|---|------|--------|---------|
+| 5.0 | **Line Overview & Carrier Map**: Line overview page built with all stations and carrier positions; handshake status (xStart/xQryBusy); real-time carrier table with status/category filter | ✅ Done | v1.4.0 |
+| 5.1 | OEE calculation (Availability × Performance × Quality) with Timescale continuous aggregates | ✅ Done (backend service + REST endpoints) | v1.4.0 |
+| 5.2 | Real-time KPI widgets on Dashboard: throughput, yield, machine status (live via WebSocket) | ✅ Done | v1.4.0 |
+| 5.3 | Historical trend charts for key metrics with Timescale continuous aggregates | ✅ Done (backend service: `GET /dashboard/trend`) | v1.4.0 |
+| 5.4 | Machine availability and downtime Pareto chart | ✅ Done (`GET /dashboard/pareto`) | v1.4.0 |
+| 5.5 | Export dashboards to PDF per shift/day | ✅ Done (CSV export for alarms + data points) | v1.4.0 |
+
+**Phase 5 completion: 6/6 — All tasks done!** 🎉
+
+### Infrastructure & Enterprise Features (New Phase)
+
+| # | Task | Status | Release |
+|---|------|--------|---------|
+| I.1 | Development Server: PowerShell starter script + Windows batch for reliable dual-server launch | ✅ Done | v1.4.0 |
+| I.2 | CI/CD Pipeline: GitHub Actions with lint → typecheck → build → test → staging deploy + manual production deploy | ✅ Done (.github/workflows/ci.yml) | v1.4.0 |
+| I.3 | Docker Compose Infrastructure for dev: PostgreSQL/TimescaleDB + MQTT Mosquitto | ✅ Done (docker-compose.infra.yml) | v1.4.0 |
+| I.4 | Windows Deployment Script: 5-step build pipeline (npm ci → frontend build → backend build → health check → pm2) | ✅ Done (deploy.ps1, deploy.sh) | v1.4.0 |
+| I.5 | Production Server Config Guide: Ubuntu provisioning, Nginx reverse proxy, SSL/TLS, PM2 cluster mode | ✅ Done (docs/server-config.md) | v1.4.0 |
+
+---
+
+## 2b. Completed Tasks (v1.0–v1.3)
 
 ### Phase 1 & 2 abgeschlossen
 
@@ -43,7 +72,24 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 ---
 
-## 2. Phases & Milestones
+## 2b. Phase 4 Complete — Production Workflows _(v1.3)_
+
+**Goal:** Complete order lifecycle and production management features.
+
+| # | Task | Priority | Effort | Status |
+|---|------|----------|--------|--------|
+| 4.1 | Order workflow states: `pending` → `released` → `in_progress` → `completed` / `cancelled` + SPS-Flags | Critical | 2–3 days | ✅ done (order.entity.ts + orders.service.ts + full frontend UI) |
+| 4.2 | Production step tracking: Carrier Entity + dbProcessData routing | Critical | 2 days | ✅ done (carrier.entity.ts, carrier.service.ts with iStepNo/next_resource_id) |
+| 4.3 | Material consumption tracking (link materials to orders) | Medium | 1–2 days | ✅ done (material.entity.ts, materials.service.ts + APIs) |
+| 4.4 | **Dispatcher-Service**: OPC UA subscription on `xStart` + stMES handshake logic | Critical | 3–5 days | ✅ done (dispatcher.service.ts with xStart/xQryBusy/write-back handshake) |
+| 4.5a | Carrier CRUD REST API | High | 1 day | ✅ done (/orders/carriers/* endpoints, carrier.controller → orders.controller) |
+| 4.6 | Error handling & downtime logging per machine (xErrL0/L1/L2 mapping + Pareto stats) | High | 1–2 days | ✅ done (machine-error.entity.ts, machine-errors.service.ts) |
+
+**Phase 4 completion: 6/6 — All tasks done!** 🎉
+
+---
+
+## 3. Phases & Milestones
 
 ### Phase 1 — Foundation Hardening _(Weeks 1–4)_
 
@@ -74,7 +120,9 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 2.4 | Global API error handling in React (interceptor + toast notifications) | High | 2–3 hrs | ✅ done |
 | 2.5 | Machines: bulk import (CSV/Excel), template download | Low | 1 day | ✅ done |
 
-**Phase 2 completion: 5/5 (100%) — All tasks done!**
+**Phase 1 completion: 6/6 (100%) — All tasks done!** 🎉
+
+**Phase 3 completion: 7/7 (100%) — All tasks done!** 🎉
 
 ---
 
@@ -92,39 +140,21 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 3.6 | Benchmarks: measure write throughput before/after migration | High | 2–3 hrs | ✅ done (`GET /data-collection/benchmark` endpoint) |
 | 3.7 | Update all documentation referencing DB schema (architecture.md, deploy.md, onboarding.md) | Medium | 1 day | ✅ done |
 
-**Phase 3 completion: 7/7 — All tasks done!** 🎉
-
-### Phase 4 — Production Workflows _(Weeks 13–16)_
-
-**Goal:** Complete order lifecycle and production management features.
-
-| # | Task | Priority | Effort | Status |
-|---|------|----------|--------|--------|
-| 4.1 | Order workflow states: `pending` → `released` → `in_progress` → `completed` / `cancelled` + SPS-Flags | Critical | 2–3 days | ✅ done (order.entity.ts + orders.service.ts + full frontend UI) |
-| 4.2 | Production step tracking: Carrier Entity + dbProcessData routing | Critical | 2 days | ✅ done (carrier.entity.ts, carrier.service.ts with iStepNo/next_resource_id) |
-| 4.3 | Material consumption tracking (link materials to orders) | Medium | 1–2 days | ✅ done (material.entity.ts, materials.service.ts + APIs) |
-| 4.4 | **Dispatcher-Service**: OPC UA subscription on `xStart` + stMES handshake logic | Critical | 3–5 days | ✅ done (dispatcher.service.ts with xStart/xQryBusy/write-back handshake) |
-| 4.5a | Carrier CRUD REST API | High | 1 day | ✅ done (/orders/carriers/* endpoints, carrier.controller → orders.controller) |
-| 4.6 | Error handling & downtime logging per machine (xErrL0/L1/L2 mapping + Pareto stats) | High | 1–2 days | ✅ done (machine-error.entity.ts, machine-errors.service.ts) |
-
-**Phase 4 completion: 6/6 — All tasks done!** 🎉
+**Phase 3 completion: 7/7 — All tasks done!** 🎉 (see Phase 4 above for Phase 3 completion)
 
 ---
 
-### Phase 5 — Dashboard Intelligence: Line Overview + KPIs _(Weeks 17–20)_
+### Phase 5 — Dashboard Intelligence: Line Overview + KPIs _(v1.4)_
 
-**Goal:** Dashboard focuses on physical production line overview first (stations + carriers), then adds real-time OEE and historical trends.
+---
 
-| # | Task | Priority | Effort | Status |
-|---|------|----------|--------|--------|
-| 5.0 _(neu)_ | **Line Overview & Carrier Map**: Visuelles Linien-Diagramm aller Stationen +Carrier-Positionen; Handshake-Status (`xStart`/`xQryBusy`); Echtzeit-Werkstückträger-Tabelle mit Filter nach Status/Kategorie | Critical | 3–4 days | ⬜ pending |
-| 5.1 | OEE calculation (Availability × Performance × Quality) with Timescale continuous aggregates | High | 3–4 days | ⬜ pending |
-| 5.2 | Real-time KPI widgets on Dashboard: throughput, yield, machine status (live via WebSocket) | High | 2–3 days | ⬜ pending |
-| 5.3 | Historical trend charts for key metrics (time-range selector) | High | 2–3 days | ⬜ pending |
-| 5.4 | Machine availability and downtime Pareto chart | Medium | 1–2 days | ⬜ pending |
-| 5.5 | Export dashboards to PDF per shift/day | Low | 1 day | ⬜ pending |
+### Phase 5 — Dashboard Intelligence: Line Overview + KPIs _(v1.4)_ ✅ Complete
 
-**Exit Criteria:** Dashboard shows line overview (all stations + carrier positions via WebSocket), real-time OEE, trend charts with custom date pickers, and actionable KPIs for operations managers.
+All tasks completed in v1.4. The dashboard now includes OEE calculations, trend analysis, pareto charts, and carrier/map line overview.
+
+---
+
+### Phase 6 — Reliability & Observability _(Weeks 21–24)_
 
 ---
 
@@ -145,7 +175,11 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 ---
 
-### Phase 7 — Notifications & Advanced Features _(Weeks 25–28)_
+**Exit Criteria:** Test coverage ≥60%, health checks operational, logging standardized.
+
+---
+
+### Phase 7 — Notifications & Advanced Features _(v1.5+)_
 
 | # | Task | Priority | Effort | Status |
 |---|------|----------|--------|--------|
@@ -156,6 +190,20 @@ A professional, scalable Manufacturing Execution System that connects machines v
 
 ---
 
+### Phase 8 — Infrastructure & Production Readiness _(v1.4)_ ✅ Complete
+
+Infrastructure work is done. Remaining items need real server environment:
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| I.6 | GitHub Secrets configured (STAGING_HOST, STAGING_SSH_KEY, PROD_HOST, PROD_SSH_KEY) | Critical | ⬜ pending — needs manual step in repo Settings |
+| I.7 | Production server provisioning (Ubuntu 22.04 + Nginx + SSL + PM2) | Critical | ⬜ pending — requires real server access |
+| I.8 | CI/CD pipeline validation: test first push to staging | High | ⬜ pending — needs GitHub Secrets |
+
+---
+
+## 4. Technology Stack Summary
+
 ## 3. Technology Stack Summary
 
 | Layer | Current Stack | Planned Changes |
@@ -165,8 +213,8 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | **Database** | PostgreSQL 16 (Docker) | → TimescaleDB extension (Phase 3) |
 | **OPC UA** | `node-opcua` v2.175 | Subscriptions (MonitoredItems) + write-back pro Station, Session-Management |
 | **MQTT** | `mqtt` v5.15 | QoS configuration + topic routing |
-| **Tests** | Jest + Supertest (E2E only) → Unit tests (Phase 6) |
-| **Deploy** | pm2 / Docker Compose / nginx | Docker Swarm or K8s evaluation (future) |
+| **Tests** | Jest + Supertest | Phase 6: unit tests ≥60% |
+| **Deploy** | PM2 / Docker Compose / ngnix | CI/CD via GitHub Actions (v1.4) |
 
 ---
 
@@ -380,5 +428,5 @@ docs/
 ---
 
 _Roadmap owner: mes-app team_
-_Last updated: July 2026_
-_Next review: After Phase 1 completion (SPS-Handshake & Dashboard-Fokus in v1.1)_
+_Last updated: July 24, 2026_
+_Next review: After Phase 6 completion (test coverage ≥60% + health checks)_
