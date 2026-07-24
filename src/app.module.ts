@@ -1,6 +1,6 @@
 import { Module, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, InjectDataSource } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import type { DataSource } from 'typeorm';
 import { AlarmsModule } from './alarms/alarms.module';
@@ -17,7 +17,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Injectable()
 export class TimescaleMigrationService implements OnModuleInit {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  private readonly dataSource: DataSource;
+
+  constructor(@InjectDataSource('DEFAULT') ds: DataSource) {
+    this.dataSource = ds;
+  }
 
   async onModuleInit(): Promise<void> {
     if (this.dataSource.options.type !== 'postgres') return;

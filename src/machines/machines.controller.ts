@@ -2,10 +2,14 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseInterceptors, Upl
 import { MachinesService } from './machines.service';
 import type { CreateMachineDto, UpdateMachineDto } from './machine.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { MachineErrorsService } from '../orders/machine-errors.service';
 
 @Controller('machines')
 export class MachinesController {
-  constructor(private readonly machinesService: MachinesService) {}
+  constructor(
+    private readonly machinesService: MachinesService,
+    private readonly machineErrorsService: MachineErrorsService,
+  ) {}
 
   @Post()
   create(@Body() dto: CreateMachineDto) { return this.machinesService.create(dto); }
@@ -44,5 +48,10 @@ export class MachinesController {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=machines-template.csv');
     return res.send(csv);
+  }
+
+  @Get('errors/pareto')
+  getPareto() { 
+    return this.machineErrorsService.getParetoStats();
   }
 }

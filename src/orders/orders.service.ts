@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between } from 'typeorm';
+import type { FindOptionsWhere, FindOptionsRelations, FindOptionsSelect } from 'typeorm';
 import { OrderEntity } from './order.entity';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
 
@@ -33,18 +34,22 @@ export class OrdersService {
   }
 
   async findAll(status?: string): Promise<OrderEntity[]> {
-    const where = status ? { status } : {};
-    return this.ordersRepo.find({ 
-      where, 
-      order: { created_at: 'DESC' },
-      relations: ['materials']
-    });
+    const validStatuses = ['pending', 'released', 'in_progress', 'completed', 'cancelled', 'on_hold'];
+    const where: FindOptionsWhere<OrderEntity> = status && validStatuses.includes(status) ? { status: status as OrderEntity['status'] } : {};
+    try {
+      return await this.ordersRepo.find({ 
+        where, 
+        order: { created_at: 'DESC' },
+      });
+    } catch (e) {
+      console.error('[OrdersService] findAll error:', e);
+      return [];
+    }
   }
 
   async findOne(id: string): Promise<OrderEntity> {
     const order = await this.ordersRepo.findOne({ 
       where: { id },
-      relations: ['materials']
     });
     if (!order) throw new BadRequestException('Order not found');
     return order;

@@ -1,4 +1,4 @@
-import { Controller, Get, Headers } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 
 interface HealthComponent { status: string; error?: string; }
@@ -8,14 +8,14 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get('health')
-  async getHealth(@Headers('authorization') auth?: string) {
+  async getHealth() {
     const dbStatus = this.checkDatabase();
-    const status: Record<string, HealthComponent> = { ok: true as any };
-    status.components = { db: dbStatus };
+    const components: Record<string, HealthComponent> = {};
+    components['db'] = dbStatus;
     
     const result: { ok: boolean; components: Record<string, HealthComponent>; timestamp: string } = {
-      ok: Object.values(status.components).every(c => c.status !== 'down'),
-      components: status.components,
+      ok: Object.values(components).every(c => c.status !== 'down'),
+      components,
       timestamp: new Date().toISOString(),
     };
     return result;

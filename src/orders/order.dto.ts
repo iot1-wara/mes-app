@@ -3,22 +3,22 @@ import { IsNotEmpty, IsString, IsUUID, IsOptional, Min, IsNumber } from 'class-v
 export class CreateOrderDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @Min(1)
   @IsNumber()
-  priority: number;
+  priority!: number;
 
   @IsUUID()
-  machine_id: string;
+  machine_id!: string;
 
   @IsNotEmpty()
   @IsString()
-  operation: string;
+  operation!: string;
 
   @Min(1)
   @IsNumber()
-  quantity: number;
+  quantity!: number;
 
   @IsOptional()
   start_time?: Date;

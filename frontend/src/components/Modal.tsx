@@ -8,7 +8,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
       <div className="bg-white rounded-xl shadow-2xl p6 w-full max-w-lg mx4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb4">
           <h2 className="text-xl font-bold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text2xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-black text2xl leading-none">&times;</button>
         </div>
         {children}
       </div>

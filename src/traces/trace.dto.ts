@@ -5,19 +5,19 @@ export type TraceCategoryType = 'process_data' | 'quality' | 'material' | 'energ
 export class CreateTraceDto {
   @IsNotEmpty()
   @IsString()
-  machine_id: string;
+  machine_id!: string;
 
   @IsOptional()
   @IsUUID()
   order_id?: string;
 
   @IsNotEmpty()
-  category: TraceCategoryType;
+  category!: TraceCategoryType;
 
   @IsNotEmpty()
-  key_data_point: string;
+  key_data_point!: string;
 
-  value: any;
+  value!: any;
 
   @IsOptional()
   tags?: Record<string, string>;

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MaterialEntity, CreateMaterialDto } from './material.dto';
+import { MaterialEntity, CreateMaterialDto } from './material.entity';
 
 @Injectable()
 export class MaterialsService {

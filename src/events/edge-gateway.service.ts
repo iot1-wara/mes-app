@@ -8,7 +8,7 @@ import { EventBusService } from './event-bus.service';
   path: '/api/edge/ws',
 })
 export class EventGateway implements OnModuleInit {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server!: Server;
   private readonly logger = new Logger(EventGateway.name);
 
   constructor(private readonly eventBus: EventBusService) {}

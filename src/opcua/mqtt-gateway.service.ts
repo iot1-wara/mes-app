@@ -11,7 +11,7 @@ const SUBSCRIPTION_TOPICS = [
 
 @Injectable()
 export class MqttGatewayService implements OnModuleInit {
-  private client: mqtt.MqttClient | null;
+  private client!: mqtt.MqttClient | null;
   private subscriptionCallbacks = new Map<string, Array<(data: any) => void>>();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;

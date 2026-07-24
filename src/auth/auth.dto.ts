@@ -7,18 +7,18 @@ export enum Role {
 }
 
 export class LoginDto {
-  @IsNotEmpty() username: string;
-  @IsNotEmpty() password: string;
+  @IsNotEmpty() username!: string;
+  @IsNotEmpty() password!: string;
 }
 
 export class RegisterDto {
-  @IsNotEmpty() username: string;
-  @IsNotEmpty() password: string;
+  @IsNotEmpty() username!: string;
+  @IsNotEmpty() password!: string;
   role?: Role;
 }
 
 export class JwtPayloadDto {
-  sub: string;
-  username: string;
-  role: string;
+  sub!: string;
+  username!: string;
+  role!: string;
 }

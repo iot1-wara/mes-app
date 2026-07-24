@@ -1,7 +1,14 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import EventEmitter from 'events';
 
-interface SPSHandshakeResult {
+export interface SpsHandshakeAck {
+  xStart: boolean;
+  xAck: boolean;
+  carrier_id?: string;
+  iStepNo?: number;
+}
+
+export interface SPSHandshakeResult {
   carrierId: string;
   success: boolean;
   xErrL0?: number;

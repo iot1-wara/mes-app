@@ -15,6 +15,6 @@ import { OrdersController } from './orders.controller';
   imports: [TypeOrmModule.forFeature([OrderEntity, CarrierEntity, MaterialEntity, MachineErrorEntity])],
   controllers: [OrdersController],
   providers: [OrdersService, CarrierService, MaterialsService, MachineErrorsService, DispatcherService],
-  exports: [OrdersService, CarrierService, MaterialsService],
+  exports: [OrdersService, CarrierService, MaterialsService, MachineErrorsService],
 })
 export class OrdersModule {}

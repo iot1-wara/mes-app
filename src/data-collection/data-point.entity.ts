@@ -5,23 +5,23 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 
 @Index(['node_id', 'timestamp'])
 export class DataPointEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  machine_id: string;
+  machine_id!: string;
 
   @Column()
-  node_id: string;
+  node_id!: string;
 
   @Column({ type: 'float8' })
-  value: number;
+  value!: number;
 
   @Column({ type: 'enum', enum: ['good', 'bad', 'uncertain'], default: 'good' })
-  quality: 'good' | 'bad' | 'uncertain';
+  quality!: 'good' | 'bad' | 'uncertain';
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  timestamp: Date;
+  timestamp!: Date;
 
   @CreateDateColumn()
-  collected_at: Date;
+  collected_at!: Date;
 }

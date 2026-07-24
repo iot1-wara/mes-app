@@ -124,22 +124,22 @@ function LoginScreen() {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-neutral-900">MES <span className="text-brand-primary">Edge</span></h1>
-        <p className="text-sm text-neutral-500 mt-2">Production Control System</p>
+        <h1 className="text-[var(--text-3xl-size)] leading-[var(--text-3xl-line)] font-bold text-neutral-black">MES <span className="text-brand-primary">Edge</span></h1>
+        <p className="text-sm text-neutral-mid mt-2">Production Control System</p>
       </div>
       
-      <div className="bg-white rounded-xl shadow-card border border-neutral-200 p-6">
+      <div className="bg-white rounded-lg shadow-card border border-neutral-border p-6">
         <div className="flex gap-2 mb-6">
-          <button onClick={() => setMode("login")} className={`flex-1 py-2 text-sm font-medium rounded-lg ${mode === "login" ? "bg-brand-primary text-white" : "bg-neutral-100 text-neutral-600"}`}>Login</button>
-          <button onClick={() => setMode("register")} className={`flex-1 py-2 text-sm font-medium rounded-lg ${mode === "register" ? "bg-brand-primary text-white" : "bg-neutral-100 text-neutral-600"}`}>Registrieren</button>
+          <button onClick={() => setMode("login")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "login" ? "bg-brand-primary text-white" : "bg-neutral-stroke text-neutral-dark hover:bg-neutral-border"}`}>Login</button>
+          <button onClick={() => setMode("register")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "register" ? "bg-brand-primary text-white" : "bg-neutral-stroke text-neutral-dark hover:bg-neutral-border"}`}>Registrieren</button>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          <div><label className="block text-sm font-medium text-neutral-700 mb-1.5">Benutzername</label>
-            <input type="text" value={form.username} onChange={(e) => setForm(f => ({...f, username: e.target.value}))} required className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30" />
+          <div><label className="block text-[var(--text-sm-size)] font-medium text-neutral-dark mb-1.5">Benutzername</label>
+            <input type="text" value={form.username} onChange={(e) => setForm(f => ({...f, username: e.target.value}))} required className="w-full bg-white border border-neutral-border rounded-md px-3 py-2 text-neutral-dark placeholder:text-neutral-light focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary transition-all" />
           </div>
-          <div><label className="block text-sm font-medium text-neutral-700 mb-1.5">Passwort</label>
-            <input type="password" value={form.password} onChange={(e) => setForm(f => ({...f, password: e.target.value}))} required className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30" />
+          <div><label className="block text-[var(--text-sm-size)] font-medium text-neutral-dark mb-1.5">Passwort</label>
+            <input type="password" value={form.password} onChange={(e) => setForm(f => ({...f, password: e.target.value}))} required className="w-full bg-white border border-neutral-border rounded-md px-3 py-2 text-neutral-dark placeholder:text-neutral-light focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary transition-all" />
           </div>
           <button type="submit" disabled={loading} className="w-full py-2.5 bg-brand-primary text-white font-medium rounded-lg hover:bg-[var(--color-brand-primary-dark)] transition-colors disabled:opacity-50">
             {loading ? "..." : (mode === "login" ? "Anmelden" : "Registrieren")}
@@ -158,9 +158,9 @@ function showToast(message, type = "info") {
     container.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;width:300px;max-height:80vh;overflow-y:auto;";
     document.body.appendChild(container);
   }
-  const colors = { error: "bg-red-500", info: "bg-blue-500", success: "bg-green-500" };
+  const colors = { error: "bg-status-error", info: "bg-brand-primary", success: "bg-status-success" };
   const toast = document.createElement("div");
-  toast.className = `${colors[type] || "bg-blue-500"} text-white px-4 py-3 rounded-lg shadow-lg mb-2 text-sm`;
+  toast.className = `${colors[type] || "bg-brand-primary"} text-white px-4 py-3 rounded-lg shadow-lg mb-2 text-sm`;
   toast.textContent = message;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 5000);

@@ -4,32 +4,32 @@ import { MaterialEntity } from './material.entity';
 @Entity('orders')
 export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'int', default: 5 })
-  priority: number;
+  priority!: number;
 
   @Column()
-  machine_id: string;
+  machine_id!: string;
 
   @Column()
-  operation: string;
+  operation!: string;
 
   @Column({ 
     type: 'enum', 
     enum: ['pending', 'released', 'in_progress', 'completed', 'cancelled', 'on_hold'],
     default: 'pending'
   })
-  status: 'pending' | 'released' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
+  status!: 'pending' | 'released' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
 
   @Column({ type: 'int', default: 0 })
-  quantity: number;
+  quantity!: number;
 
   @Column({ type: 'int', default: 0 })
-  completed_quantity: number;
+  completed_quantity!: number;
 
   // SPS handshake flags (diagnostic interface OPC UA)
   @Column({ nullable: true })
@@ -64,8 +64,8 @@ export class OrderEntity {
   materials?: MaterialEntity[];
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 }

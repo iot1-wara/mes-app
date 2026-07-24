@@ -6,11 +6,11 @@ export type MachineStatus = 'online' | 'offline' | 'maintenance' | 'error' | 'id
 export class CreateMachineDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @Transform(({ value }) => (value || 'offline').toLowerCase())
   @IsEnum(['online', 'offline', 'maintenance', 'error', 'idle'])
-  status: MachineStatus;
+  status!: MachineStatus;
 
   @IsOptional()
   @IsString()
@@ -18,7 +18,7 @@ export class CreateMachineDto {
 
   @IsNotEmpty()
   @IsString()
-  location: string;
+  location!: string;
 
   @IsOptional()
   @IsString()

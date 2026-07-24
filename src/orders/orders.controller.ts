@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Patch } from '@nestjs/common';
+﻿import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CarrierService } from './carrier.service';
 import { MaterialsService } from './materials.service';
@@ -6,7 +6,8 @@ import { MachineErrorsService } from './machine-errors.service';
 import { DispatcherService } from './dispatcher.service';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
 import type { CreateCarrierDto, UpdateCarrierDto, AdvanceCarrierDto } from './carrier.dto';
-import type { CreateMaterialDto } from './material.dto';
+import type { CreateMaterialDto } from './material.entity';
+import { SPSHandshakeResult } from './dispatcher.service';
 
 @Controller('orders')
 export class OrdersController {
@@ -18,9 +19,28 @@ export class OrdersController {
     private readonly dispatcherService: DispatcherService,
   ) {}
 
+  // --- Carrier CRUD (before :id routes to avoid wildcard match) ---
+  @Post('carriers')
+  createCarrier(@Body() dto: CreateCarrierDto) { return this.carrierService.create(dto); }
+
+  @Get('carriers/list') 
+  getAllCarriers() { return this.carrierService.findAll(); }
+
+  @Get('carriers/:id')
+  getCarrier(@Param('id') id: string) { return this.carrierService.findOne(id); }
+
+  @Patch('carriers/:id')
+  updateCarrier(@Param('id') id: string, @Body() dto: UpdateCarrierDto) { return this.carrierService.update(id, dto); }
+
+  @Get('carriers/station/:stationId')
+  getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
+
   // --- Orders ---
   @Post()
   createOrder(@Body() dto: CreateOrderDto) { return this.ordersService.create(dto); }
+
+  @Get('stats')
+  getOrderStats() { return this.ordersService.getOrderStats(); }
 
   @Get()
   getAllOrders(@Query('status') status?: string) { return this.ordersService.findAll(status); }
@@ -48,25 +68,6 @@ export class OrdersController {
 
   @Post(':id/advance-step')
   advanceStep(@Param('id') id: string) { return this.ordersService.advanceStep(id); }
-
-  @Get('stats')
-  getOrderStats() { return this.ordersService.getOrderStats(); }
-
-  // --- Carrier CRUD ---
-  @Post('carriers')
-  createCarrier(@Body() dto: CreateCarrierDto) { return this.carrierService.create(dto); }
-
-  @Get('carriers')
-  getAllCarriers() { return this.carrierService.findAll(); }
-
-  @Get('carriers/:id')
-  getCarrier(@Param('id') id: string) { return this.carrierService.findOne(id); }
-
-  @Patch('carriers/:id')
-  updateCarrier(@Param('id') id: string, @Body() dto: UpdateCarrierDto) { return this.carrierService.update(id, dto); }
-
-  @Get('carriers/station/:stationId')
-  getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
 
   // --- Materials ---
   @Post('materials')

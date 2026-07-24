@@ -39,7 +39,7 @@ export class GuardWithTokenValidation implements CanActivate {
         role: payload.role 
       };
     } catch (err) {
-      console.warn('[Auth] Invalid token for:', request.url, '-', err.message);
+      console.warn('[Auth] Invalid token for:', request.url, '-', (err as Error).message);
       throw new UnauthorizedException('Invalid or expired token');
     }
     

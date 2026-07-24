@@ -1,0 +1,36 @@
+# MES Development Infrastructure — PostgreSQL + MQTT
+
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: mes_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-mes_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password_2024}
+      POSTGRES_DB: ${DB_DATABASE:-mes_production}
+    ports:
+      - "5432:5432"
+    volumes:
+      - mes_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mes_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: mes_mqtt_dev
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/ mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+
+volumes:
+  mes_dev_data:
+  mosquitto_data:

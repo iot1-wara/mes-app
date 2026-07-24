@@ -1,6 +1,6 @@
 const API_BASE = "/api";
 
-let authToken = "";
+let authToken = localStorage.getItem("mes_jwt") || "";
 let currentUser: any = null;
 let toastListeners: Array<(msg: string, type: string) => void> = [];
 let renderAppCb: (() => void) | null = null;
@@ -34,10 +34,10 @@ export function showToast(message: string, type = "info") {
   if (toasts) {
     const el = document.createElement("div");
     const colors = {
-      info: "border-blue-500 bg-white text-neutral-800",
-      success: "border-green-500 bg-green-50 text-green-900",
-      error: "border-red-500 bg-red-50 text-red-900",
-      warning: "border-yellow-500 bg-yellow-50 text-yellow-900"
+      info: "border-brand-primary bg-white text-neutral-800",
+      success: "border-status-success bg-status-success-bg text-status-success",
+      error: "border-status-error bg-status-error-bg text-status-error",
+      warning: "border-status-warning bg-status-warning-bg text-status-warning"
     };
     el.className = `px-4 py-3 rounded-lg shadow-lg border-l-4 ${colors[type] || colors.info} mb-2 flex items-center gap-2`;
     el.textContent = message;

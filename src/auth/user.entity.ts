@@ -3,20 +3,20 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 @Entity('users')
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  username: string;
+  username!: string;
 
   @Column()
-  password: string;
+  password!: string;
 
   @Column({ type: 'enum', enum: ['admin', 'operator', 'viewer'], default: 'operator' })
-  role: 'admin' | 'operator' | 'viewer';
+  role!: 'admin' | 'operator' | 'viewer';
 
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }

@@ -3,16 +3,16 @@ import { IsNotEmpty, IsString, IsUUID, IsOptional, IsEnum, IsNumber } from 'clas
 export class CreateCarrierDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @IsUUID()
-  current_station_id: string;
+  current_station_id!: string;
 
   @IsUUID()
-  next_resource_id: string;
+  next_resource_id!: string;
 
   @IsUUID()
-  order_id: string;
+  order_id!: string;
 
   @IsNumber()
   @IsOptional()
@@ -53,10 +53,10 @@ export class UpdateCarrierDto {
 
 export class AdvanceCarrierDto {
   @IsNumber()
-  iStepNo: number;
+  iStepNo!: number;
 
   @IsUUID()
-  next_resource_id: string;
+  next_resource_id!: string;
 
   @IsString()
   step_description?: string;

@@ -5,15 +5,15 @@ import type { AlarmSeverity } from './alarm.entity';
 export class CreateAlarmDto {
   @Transform(({ value }) => (value || 'info').toLowerCase())
   @IsEnum(['info', 'warning', 'error', 'critical'])
-  severity: AlarmSeverity;
+  severity!: AlarmSeverity;
 
   @IsNotEmpty()
   @IsString()
-  machine_id: string;
+  machine_id!: string;
 
   @IsNotEmpty()
   @IsString()
-  message: string;
+  message!: string;
 
   @IsOptional()
   @IsString()

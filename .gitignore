@@ -18,9 +18,14 @@ build/
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
+# TypeScript build artifacts
+*.tsbuildinfo
 
-# Windows batch scripts - not needed in repo
-*.bat
-*.ps1
+# Legacy / temp files  
+backend-out.txt
+server-log-dev.txt
+test-output.txt
+BUILD_FIX_REPORT.md
+NEXT_AGENT_HANDOFF.md
+package-dev-fix.json
+*output*.txt

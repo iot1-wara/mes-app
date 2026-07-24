@@ -5,16 +5,16 @@ export type AlarmSeverity = 'info' | 'warning' | 'error' | 'critical';
 @Entity('alarms')
 export class AlarmEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'enum', enum: ['info', 'warning', 'error', 'critical'], default: 'info' })
-  severity: AlarmSeverity;
+  severity!: AlarmSeverity;
 
   @Column()
-  machine_id: string;
+  machine_id!: string;
 
   @Column()
-  message: string;
+  message!: string;
 
   @Column({ nullable: true })
   source?: string;
@@ -23,11 +23,11 @@ export class AlarmEntity {
   acknowledged_at?: Date;
 
   @Column({ default: false })
-  acknowledged: boolean;
+  acknowledged!: boolean;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 }

@@ -41,3 +41,158 @@
 @utility shadow-hover {
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
 }
+
+/* ========== PRODUCTION LINE VISUALS ========== */
+
+/* Station blocks with status-based top gradient border */
+.station-gradient-online,
+.station-gradient-error,
+.station-gradient-warning,
+.station-gradient-offline {
+  position: relative;
+}
+.station-gradient-online::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--color-status-success), color-mix(in srgb, var(--color-status-success) 60%, transparent));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.station-gradient-error::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--color-status-error), color-mix(in srgb, var(--color-status-error) 60%, transparent));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.station-gradient-warning::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--color-status-warning), color-mix(in srgb, var(--color-status-warning) 60%, transparent));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.station-gradient-offline::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--color-neutral-400), color-mix(in srgb, var(--color-neutral-400) 60%, transparent));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Flow connector between stations */
+@utility flow-connector {
+  position: relative;
+  height: 2px;
+  min-width: 32px;
+  flex-shrink: 0;
+  background: var(--color-neutral-200);
+}
+.flow-connector-active::before {
+  content: '';
+  width: 14px;
+  height: 6px;
+  border-radius: 9999px;
+  top: -2px;
+  background: var(--color-brand-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-brand-primary) 50%, transparent);
+  animation: flow-pulse-move 2s ease-in-out infinite;
+}
+.flow-connector-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent, var(--color-brand-primary)/40);
+}
+
+@keyframes flow-pulse-move {
+  0% { left: -14px; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { left: calc(100% + 14px); opacity: 0; }
+}
+
+/* Carrier block with status bar */
+@utility carrier-status-bar {
+  height: 3px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+@utility carrier-status-bar--online { background: var(--color-status-success); }
+@utility carrier-status-bar--error { background: var(--color-status-error); }
+@utility carrier-status-bar--warning { background: var(--color-status-warning); }
+@utility carrier-status-bar--idle { background: var(--color-neutral-400); }
+@utility carrier-status-bar--info { background: var(--color-status-info); }
+@utility carrier-status-bar--brand { background: var(--color-brand-primary); }
+@utility carrier-status-bar--lilac { background: var(--color-brand-lilac); }
+
+/* Handshake status dots */
+@utility hs-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+}
+@utility hs-dot-success { background: var(--color-status-success); box-shadow: 0 0 4px color-mix(in srgb, var(--color-status-success) 40%, transparent); }
+@utility hs-dot-brand { background: var(--color-brand-primary); box-shadow: 0 0 4px color-mix(in srgb, var(--color-brand-primary) 40%, transparent); }
+@utility hs-dot-info { background: var(--color-status-info); box-shadow: 0 0 4px color-mix(in srgb, var(--color-status-info) 40%, transparent); }
+
+/* KPI gradients */
+@utility kpi-gradient-info {
+  background: linear-gradient(135deg, var(--color-status-info), color-mix(in srgb, var(--color-status-info) 80%, transparent));
+}
+@utility kpi-gradient-success {
+  background: linear-gradient(135deg, var(--color-status-success), color-mix(in srgb, var(--color-status-success) 80%, transparent));
+}
+@utility kpi-gradient-lilac {
+  background: linear-gradient(135deg, var(--color-brand-lilac), color-mix(in srgb, var(--color-brand-lilac) 80%, transparent));
+}
+@utility kpi-gradient-error {
+  background: linear-gradient(135deg, var(--color-status-error), color-mix(in srgb, var(--color-status-error) 80%, transparent));
+}
+@utility kpi-glow-info { box-shadow: 0 0 30px rgba(37,99,235,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+@utility kpi-glow-success { box-shadow: 0 0 30px rgba(22,163,74,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+@utility kpi-glow-lilac { box-shadow: 0 0 30px rgba(155,114,207,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+@utility kpi-glow-error { box-shadow: 0 0 30px rgba(220,38,38,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+
+@utility kpi-gradient-neutral {
+  background: linear-gradient(135deg, var(--color-neutral-700), color-mix(in srgb, var(--color-neutral-700) 80%, transparent));
+}
+
+/* Alarm inactive KPI */
+@utility kpi-gradient-alarm-off {
+  background: linear-gradient(135deg, var(--color-neutral-800), color-mix(in srgb, var(--color-neutral-800) 80%, transparent));
+}
+
+/* Line overview flow dots */
+@utility line-flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-brand-primary);
+  animation: carrier-move 1.5s ease-in-out infinite;
+}
+
+/* Old production line styles (kept for backward compat) */
+.arrow-connector {
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(to right, var(--color-neutral-300), var(--color-brand-primary)/60);
+  position: relative;
+}
+.arrow-connector::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--color-brand-primary)/60;
+}
+
+@keyframes carrier-move {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}

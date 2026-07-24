@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import { MachineErrorEntity, CreateErrorDto } from './machine-error.dto';
+import { MachineErrorEntity, CreateErrorDto } from './machine-error.entity';
 
 @Injectable()
 export class MachineErrorsService {
@@ -41,7 +41,7 @@ export class MachineErrorsService {
       ]);
 
     if (start) qb.andWhere('me.created_at >= :start', { start });
-    if (end) qb.addWhere('me.created_at <= :end', { end });
+    if (end) qb.andWhere('me.created_at <= :end', { end });
 
     const stats = await qb.getRawOne();
 
@@ -60,6 +60,16 @@ export class MachineErrorsService {
       maxDowntimeSec: parseFloat(stats['max(me.duration_seconds)'] ?? '0'),
       topCategories: catStats.map(s => ({ category: s.category, count: parseInt(s.count, 10) })),
     };
+  }
+
+  async getParetoStats(): Promise<Array<{ category: string; count: number }>> {
+    const catStats = await this.machineErrorsRepo.createQueryBuilder('me')
+      .select(['me.error_category AS category', 'COUNT(*) AS count'])
+      .groupBy('me.error_category')
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    return catStats.map(s => ({ category: s.category, count: parseInt(s.count, 10) }));
   }
 
   async recoverError(errorId: string): Promise<MachineErrorEntity> {

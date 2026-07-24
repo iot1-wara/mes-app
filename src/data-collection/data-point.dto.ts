@@ -3,14 +3,14 @@ import { IsNotEmpty, IsNumber, IsString, IsUUID, IsOptional, IsEnum } from 'clas
 export class CreateDataPointDto {
   @IsNotEmpty()
   @IsUUID()
-  machine_id: string;
+  machine_id!: string;
 
   @IsNotEmpty()
   @IsString()
-  node_id: string;
+  node_id!: string;
 
   @IsNumber()
-  value: number;
+  value!: number;
 
   @IsOptional()
   @IsEnum(['good', 'bad', 'uncertain'])

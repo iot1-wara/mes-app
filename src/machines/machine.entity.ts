@@ -11,19 +11,19 @@ export enum MachineStatusEnum {
 @Entity('machines')
 export class MachineEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'enum', enum: MachineStatusEnum, default: MachineStatusEnum.OFFLINE })
-  status: MachineStatusEnum;
+  status!: MachineStatusEnum;
 
   @Column({ nullable: true })
   type?: string;
 
   @Column()
-  location: string;
+  location!: string;
 
   @Column({ nullable: true })
   model?: string;
@@ -32,14 +32,14 @@ export class MachineEntity {
   serial_number?: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  telemetry: Record<string, any>;
+  telemetry!: Record<string, any>;
 
   @Column({ type: 'timestamp', nullable: true })
-  last_heartbeat: Date;
+  last_heartbeat?: Date;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 }

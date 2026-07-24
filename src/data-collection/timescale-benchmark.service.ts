@@ -12,7 +12,12 @@ export class TimescaleBenchmarkService {
     compressedSizePercent: number;
     rollupQueryLatencyMs: number;
   }> {
-    const results = {};
+    const results: { 
+      rawWritesPerSec: number; 
+      hypertableWritesPerSec: number;
+      compressedSizePercent: number;
+      rollupQueryLatencyMs: number;
+    } = {} as any;
 
     // Benchmark 1: Raw writes per second on plain table
     const t0 = Date.now();
@@ -77,7 +82,7 @@ export class TimescaleBenchmarkService {
       "SELECT tablename, compressionsize_bytes, rawdata_size_bytes FROM timescaledb_partial_compression_stats WHERE tablename = 'data_points';",
     ).catch(() => []);
 
-    const retention = await this.database.query(`
+    const retention = await this.dataSource.query(`
       SELECT policy_name, table_name, initial_interval, max_interval 
       FROM timescaledb_information.partitioning;
     `).catch(() => []);
@@ -88,7 +93,7 @@ export class TimescaleBenchmarkService {
 
     const dataSize = await this.dataSource.query(
       "SELECT pg_total_relation_size('data_points') AS total_bytes;",
-    ].catch(() => [{ total_bytes: 0 }]);
+    ).catch(() => [{ total_bytes: 0 }]);
 
     return {
       hypertables: hypTables,

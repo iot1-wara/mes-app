@@ -70,7 +70,7 @@ export class MachinesService {
     const missing = mandatory.filter(h => !headers.includes(h));
     if (missing.length) throw new Error(`CSV required columns: ${missing.join(', ')}`);
 
-    const importStatuses: MachineStatusEnum[] = ['online','offline','maintenance','error','idle'];
+    const importStatuses: MachineStatusEnum[] = [MachineStatusEnum.ONLINE, MachineStatusEnum.OFFLINE, MachineStatusEnum.MAINTENANCE, MachineStatusEnum.ERROR, MachineStatusEnum.IDLE];
     let imported = 0;
     const errors: string[] = [];
 
@@ -79,9 +79,9 @@ export class MachinesService {
       try {
         const machine = this.machinesRepo.create({
           name: String(row.name || '').trim(),
-          status: importStatuses.includes((row.status || 'online').toLowerCase() as any)
-            ? (row.status || 'online').toLowerCase() as MachineStatusEnum
-            : 'offline',
+          status: (importStatuses.includes((row.status || 'online') as MachineStatusEnum)
+            ? (row.status || 'online') as MachineStatusEnum
+            : MachineStatusEnum.OFFLINE),
           type: row.type || '',
           location: row.location || '',
           model: row.model || '',

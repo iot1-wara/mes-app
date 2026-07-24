@@ -33,7 +33,7 @@ export default function Sidebar() {
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? "bg-brand-primary text-white shadow-sm"
-                  : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                  : "text-neutral-dark hover:bg-neutral-stroke hover:text-neutral-black"
               }`}
             >
               <span className="text-base leading-none">{item.icon}</span>
@@ -44,7 +44,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-neutral-100">
-        <button onClick={() => { logoutUser(); window.location.href = "/auth/login"; }} className="w-full py-2 text-sm text-red-500 hover:text-red-600 font-medium rounded-md hover:bg-red-50 transition-colors">Abmelden</button>
+        <button onClick={() => { logoutUser(); window.location.href = "/auth/login"; }} className="w-full py-2 text-sm text-status-error hover:text-status-error-dark font-medium rounded-md hover:bg-status-error-bg transition-colors">Abmelden</button>
         <div className="flex items-center gap-2 text-xs text-neutral-400 mt-2">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
           Edge aktiv
