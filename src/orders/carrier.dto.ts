@@ -1,16 +1,20 @@
-import { IsNotEmpty, IsString, IsUUID, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsOptional, IsEnum, IsNumber, IsDefined } from 'class-validator';
 
 export class CreateCarrierDto {
   @IsNotEmpty()
   @IsString()
   name!: string;
 
+  @IsNotEmpty()
   @IsUUID()
   current_station_id!: string;
 
+  @IsNotEmpty()
   @IsUUID()
   next_resource_id!: string;
 
+  @IsNotEmpty()
+  @IsDefined()
   @IsUUID()
   order_id!: string;
 

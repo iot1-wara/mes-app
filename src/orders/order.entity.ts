@@ -61,7 +61,7 @@ export class OrderEntity {
   error_message?: string;
 
   @OneToMany(() => MaterialEntity, (mat) => mat.order)
-  materials?: MaterialEntity[];
+  materials?: any[];
 
   @CreateDateColumn()
   created_at!: Date;

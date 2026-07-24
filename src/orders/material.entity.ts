@@ -20,7 +20,7 @@ export class MaterialEntity {
 
   @ManyToOne(() => OrderEntity, (order) => order.materials, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
-  order?: OrderEntity;
+  order?: any;
 
   @Column()
   order_id!: string;

@@ -11,10 +11,21 @@ export class TimescaleMigrationService implements OnModuleInit {
 
     const queryRunner = this.dataSource.createQueryRunner();
     try {
-      // Ensure TimescaleDB extension is installed
-      await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS timescaledb;`);
+      await queryRunner.query(`SELECT 1`);
 
-      // Check if data_points is already a hypertable
+      // Check if TimescaleDB extension is available
+      let tdbAvailable: boolean;
+      try {
+        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS timescaledb;`);
+        tdbAvailable = true;
+      } catch (err: any) {
+        if (err?.code === '0A000' || err?.message?.includes('timescaledb')) {
+          console.log('[TimescaleDB] Extension not available — running in standard PostgreSQL mode');
+          return;
+        }
+        throw err;
+      }
+
       const [{ counted }] = await queryRunner.query(
         "SELECT COUNT(*) AS counted FROM timescaledb_information.hypertables WHERE table_name = 'data_points';",
       );
@@ -22,7 +33,7 @@ export class TimescaleMigrationService implements OnModuleInit {
       if (counted === 0) {
         // Create hypertable with daily chunks
         await queryRunner.query(
-          `SELECT create_hypertable('data_points', 'timestamp', chunk_time_interval := INTERVAL '1 day', if_not_exists := TRUE);`,
+          `SELECT create_hypertable('data_points', 'timestamp', chunk_time_interval := INTERVAL '1 day');`,
         );
 
         // Add compression for older data

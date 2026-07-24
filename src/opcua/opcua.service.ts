@@ -28,7 +28,7 @@ export class OpcUaService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy() {
     if (this.session) { this.session.destroy().catch(() => {}); }
-    if (this.client) { this.client.close().catch(() => {}); }
+    if (this.client && typeof this.client.disconnect === 'function') { this.client.disconnect().catch(() => {}); }
   }
 
   async readNode(nodeId: string): Promise<any> {

@@ -1,33 +1,32 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-
-interface HealthComponent { status: string; error?: string; }
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {}
 
   @Get('health')
   async getHealth() {
-    const dbStatus = this.checkDatabase();
-    const components: Record<string, HealthComponent> = {};
-    components['db'] = dbStatus;
-    
-    const result: { ok: boolean; components: Record<string, HealthComponent>; timestamp: string } = {
+    const components: Record<string, { status: string; error?: string }> = {};
+
+    // Database check
+    try {
+      await this.dataSource.query('SELECT 1');
+      components.db = { status: 'up' };
+    } catch (err: any) {
+      components.db = { status: 'down', error: err.message };
+    }
+
+    const result: { ok: boolean; components: Record<string, { status: string; error?: string }>; timestamp: string } = {
       ok: Object.values(components).every(c => c.status !== 'down'),
       components,
       timestamp: new Date().toISOString(),
     };
     return result;
   }
-
-  private checkDatabase(): HealthComponent {
-    try {
-      return { status: 'up' };
-    } catch (err: any) {
-      return { status: 'down', error: err.message };
-    }
-  }
 }
-
-

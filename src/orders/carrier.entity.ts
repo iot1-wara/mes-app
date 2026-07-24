@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { OrderEntity } from '../orders/order.entity';
+import { OrderEntity } from './order.entity';
 
 @Entity('carriers')
 @Index(['current_station_id'])
@@ -17,11 +17,11 @@ export class CarrierEntity {
   @Column({ type: 'int', default: 0 })
   nextStepNo!: number;
 
-  @Column()
-  current_station_id!: string;
+  @Column({ nullable: true })
+  current_station_id?: string;
 
-  @Column()
-  next_resource_id!: string;
+  @Column({ nullable: true })
+  next_resource_id?: string;
 
   // OPC UA handshake flags (from MES → SPS interface)
   @Column({ type: 'jsonb', nullable: true })
@@ -43,7 +43,7 @@ export class CarrierEntity {
 
   @ManyToOne(() => OrderEntity, (order) => order.materials, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
-  order?: OrderEntity;
+  order?: any;
 
   @Column()
   order_id!: string;

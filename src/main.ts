@@ -6,6 +6,9 @@ import { ValidationPipe, UnauthorizedException, CanActivate, ExecutionContext, E
 import { JwtService } from '@nestjs/jwt';
 import { WsAdapter } from '@nestjs/platform-ws';
 import helmet from 'helmet';
+import * as winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 class AllAuthGuard implements CanActivate {
   private jwtService?: JwtService;
@@ -15,13 +18,11 @@ class AllAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     
-    // Public routes — skip entirely
     if (request.url.startsWith('/api/auth/login') || 
         request.url.startsWith('/api/auth/register') || 
         request.url.startsWith('/api/auth/bootstrap')) return true;
     if (request.method === 'OPTIONS') return true;
     
-    // Auth header check
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing authentication token');
@@ -45,29 +46,91 @@ class AllAuthGuard implements CanActivate {
   }
 }
 
+function createLogger(): winston.Logger {
+  const transports: winston.transport[] = [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message }) => {
+          return `${timestamp} [${level?.toUpperCase()}] ${message}`;
+        }),
+      ),
+    }),
+    new DailyRotateFile({
+      filename: 'logs/app-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.json(),
+      ),
+    }),
+    new DailyRotateFile({
+      filename: 'logs/error-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '30d',
+      level: 'error',
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.json(),
+      ),
+    }),
+  ];
+  
+  return winston.createLogger({ transports });
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = createLogger();
   
-  // helmet security headers
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
+  
+  // swagger configuration
+  const config = new DocumentBuilder()
+    .setTitle('MES Production Control System')
+    .setDescription('Manufacturing Execution System API documentation')
+    .setVersion('1.4')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    }, 'Authorization')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
   app.use(helmet());
-  
-  // WebSocket adapter
   app.useWebSocketAdapter(new WsAdapter(app));
-  
-  // CORS setup
   app.enableCors({ origin: '*', credentials: true });
-  
-  // Global prefix for all REST endpoints
   app.setGlobalPrefix('api');
   
-  // Validation pipe — strips non-validated properties, transforms objects to class instances
+  // Add correlation ID middleware for request tracing
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const corrId = req.headers['x-correlation-id'] as string || require('uuid').v4();
+    res.setHeader('X-Correlation-ID', corrId);
+    (req as any).correlationId = corrId;
+    logger.info(`${req.method} ${req.url} — correlation id: ${corrId}`);
+
+    const contextLogger = logger.child({ correlationId: corrId, method: req.method, url: req.url });
+    
+    res.on('finish', () => {
+      contextLogger.info(`${req.method} ${req.url} ${res.statusCode}`);
+    });
+
+    next();
+  });
+  
   app.useGlobalPipes(new ValidationPipe({ 
     whitelist: true, 
     transform: true,
     skipMissingProperties: false,
   }));
 
-  // JWT Guard for all requests — only reject non-public routes without valid tokens
   const jwtService = new JwtService({
     secret: process.env.JWT_SECRET || 'mes-production-jwt-secret-key-2026',
     signOptions: { expiresIn: Number(process.env.JWT_EXPIRES_IN) || 86400 },
@@ -92,19 +155,15 @@ async function bootstrap() {
     }
   })());
   
-  // Run TimescaleDB migration in background — don't block startup
   try {
     const dbUrl = `postgresql://${process.env.DB_USERNAME || 'mes_admin'}:${process.env.DB_PASSWORD}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_DATABASE || 'mes_production'}`;
     console.log('[TimescaleDB] Migration skipped (requires TypeORM connection)');
   } catch {}
 
   const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
-  console.log('Frontend path:', frontendDistPath);
   
-  // Serve static files from frontend dist (index.html etc)
   app.use(express.static(frontendDistPath));
 
-  // SPA fallback: only GET/HEAD requests that are NOT API routes get index.html
   app.use((req: any, res: any, next: any) => {
     if (req.method === 'GET' || req.method === 'HEAD') {
       if (!req.url.includes('.') && !req.url.startsWith('/api/')) {
@@ -115,7 +174,6 @@ async function bootstrap() {
     next();
   });
 
-  // Global error handler — logs full error before Nest masks it
   app.useGlobalFilters({
     catch(error: any) { 
       console.error('[HTTP Error]', error?.message, '\n', error?.stack); 
@@ -124,7 +182,6 @@ async function bootstrap() {
     getHandler() { return (): void => {}; },
   } as ExceptionFilter<any>);
   
-  // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n[Graceful Shutdown] SIGINT received — shutting down...');
     await app.close();
@@ -140,6 +197,6 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   
-  console.log(`\nMES Edge Gateway running on http://localhost:${port}\nFrontend:     http://localhost:${port}\nAPI (REST):   http://localhost:${port}/api/...\n`);
+  console.log(`\nMES Edge Gateway running on http://localhost:${port}\nFrontend:     http://localhost:${port}\nAPI (REST):   http://localhost:${port}/api/...\nSwagger:      http://localhost:${port}/api/docs\n`);
 }
 bootstrap();

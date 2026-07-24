@@ -2,8 +2,39 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testRegex": ".e2e-spec\\.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+    "^.+\\.(t|j)s$": [
+   "@swc/jest",
+       {
+         "jsc": {
+           "parser": {
+             "syntax": "typescript",
+             "dynamicImport": true,
+             "decorators": true
+           },
+           "transform": {
+             "decoratorMetadata": true,
+             "legacyDecorator": true
+           },
+           "target": "es2022",
+           "keepClassNames": true
+         },
+         "minify": false,
+         "module": {
+           "type": "commonjs",
+           "strict": false,
+           "strictMode": true,
+           "allowTopLevelThis": true,
+           "lazy": true,
+           "noInterop": false
+         },
+         "sourceMaps": "inline"
+       }
+    ]
+  },
+
+  "transformIgnorePatterns": [
+    "/node_modules/(?!(hexy)/)"
+  ]
 }
