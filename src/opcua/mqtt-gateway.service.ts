@@ -91,6 +91,8 @@ export class MqttGatewayService implements OnModuleInit {
     return null;
   }
 
+  private reconnectTimer?: NodeJS.Timeout;
+
   async onModuleInit() {
     const savedConfig = this.loadSavedMqttConfig();
     if (savedConfig?.brokerUrl) {
@@ -101,7 +103,7 @@ export class MqttGatewayService implements OnModuleInit {
     // Persist autoCreateOrders in config file
     this.currentStatus.autoCreateOrders = (savedConfig?.autoCreateOrders !== undefined) ? savedConfig.autoCreateOrders : true;
     await this.saveMqttConfig();
-    const brokerUrl = this.configService.get('MQTT_BROKER_URL') || savedConfig?.brokerUrl || 'mqtt://localhost:1883';
+    const brokerUrl = savedConfig?.brokerUrl || process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
     let connectedOnFirstTry = false;
 
     try {
@@ -116,12 +118,32 @@ export class MqttGatewayService implements OnModuleInit {
       setTimeout(() => {
         if (!connectedOnFirstTry) {
           this.logger.warn('MQTT broker not reachable at: ' + brokerUrl);
+          this.startAutoReconnect(brokerUrl);
         }
       }, 8000);
     } catch (e: any) {
       this.logger.error('Could not initialize MQTT connection: ' + e.message);
       this.client = null;
+      this.startAutoReconnect(brokerUrl);
     }
+  }
+
+  private startAutoReconnect(brokerUrl: string) {
+    if (this.reconnectTimer) return;
+    this.logger.log('Starting automated MQTT reconnect attempts...');
+    const attemptConnect = () => {
+      if (!this.client) {
+        this.logger.log(`Attempting automated MQTT reconnect to ${brokerUrl}...`);
+        this.client = mqtt.connect(brokerUrl, {
+          clientId: 'mes-edge-' + Date.now(),
+          clean: true,
+          reconnectPeriod: 30000,
+        });
+        this.setupClientEvents(brokerUrl, false);
+      }
+    };
+    this.reconnectTimer = setInterval(attemptConnect, 30000);
+    attemptConnect(); // try immediately too
   }
 
   private setupClientEvents(brokerUrl: string, connectedOnFirstTry: boolean) {
@@ -155,6 +177,11 @@ export class MqttGatewayService implements OnModuleInit {
       this.currentStatus.connected = true;
       this.eventBus.broadcast('mqtt/status', { connected: true, brokerUrl: brokerUrl });
       this.logger.log('Connected to MQTT broker at ' + brokerUrl);
+      if (this.reconnectTimer) {
+        clearInterval(this.reconnectTimer);
+        this.reconnectTimer = undefined;
+        this.logger.log('MQTT connected successfully — stopping auto-reconnect timer');
+      }
       for (const topic of SUBSCRIPTION_TOPICS) {
         const client = this.client;
         if (client) {
@@ -294,6 +321,10 @@ export class MqttGatewayService implements OnModuleInit {
       this.currentStatus.connected = false;
       this.eventBus.broadcast('mqtt/status', { connected: false });
       this.logger.log('MQTT broker disconnected');
+    }
+    if (this.reconnectTimer) {
+      clearInterval(this.reconnectTimer);
+      this.reconnectTimer = undefined;
     }
   }
 

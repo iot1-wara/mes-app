@@ -179,6 +179,7 @@ export class EdgeController {
 
   @Post('mqtt/order/auto-create')
   async toggleAutoCreate(@Body('enabled') enabled: boolean) {
+    this.mqttGatewayService.setMqttConfig({ autoCreateOrders: enabled });
     return { autoCreate: enabled };
   }
 
