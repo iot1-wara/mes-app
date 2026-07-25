@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between } from 'typeorm';
 import type { FindOptionsWhere, FindOptionsRelations, FindOptionsSelect } from 'typeorm';
 import { OrderEntity } from './order.entity';
+import { CarrierEntity } from './carrier.entity';
+import { MaterialEntity } from './material.entity';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -116,8 +118,12 @@ export class OrdersService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.ordersRepo.delete(id);
-    if (result.affected === 0) throw new BadRequestException('Order not found');
+    await this.ordersRepo.manager.transaction(async (tm) => {
+      await tm.delete(CarrierEntity, { order_id: id });
+      await tm.delete(MaterialEntity, { order_id: id });
+      const result = await tm.delete(OrderEntity, id);
+      if (result.affected === 0) throw new BadRequestException('Order not found');
+    });
   }
 
   async updateProgress(id: string, completedQty: number): Promise<OrderEntity> {

@@ -68,9 +68,9 @@ export class CarrierEntity {
   @Column({ type: 'int', default: 0 })
   total_material_used_qty!: number;
 
-  @ManyToOne(() => OrderEntity, (order) => order.materials, { onDelete: 'CASCADE' })
+  @ManyToOne(() => OrderEntity, (order) => order.carriers, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
-  order?: any;
+  order?: OrderEntity;
 
   @Column({ nullable: true })
   order_id!: string | null;

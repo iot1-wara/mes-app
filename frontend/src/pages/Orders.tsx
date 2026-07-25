@@ -21,14 +21,22 @@ export default function OrdersPage() {
   }, []);
 
   const refreshOrders = () => {
-    api.get("/orders").then((d) => { if (Array.isArray(d)) setOrders(d); }).catch(() => {});
-    api.get("/orders/stats").then((s) => { if (s) setStats(s); }).catch(() => {});
+    Promise.all([
+      api.get("/orders").then((d) => { if (Array.isArray(d)) setOrders(d); }).catch((e:any) => console.error("refresh orders fail:", e.message)),
+      api.get("/orders/stats").then((s) => { if (s) setStats(s); }).catch(() => {}),
+    ]);
   };
 
-  function handleDelete(id: string) {
-    if (!confirm("Auftrag wirklich löschen?")) return;
-    api.del("/orders/" + id).then(() => refreshOrders()).catch(() => {});
+  async function handleDelete(id: string) {
+    if (!confirm("Auftrag wirklich lösch?")) return;
+    try {
+      await api.del("/orders/" + id);
+      refreshOrders();
+    } catch (err: any) {
+      console.error("Delete order failed:", err.message);
+    }
   }
+
 
   const TRANSITION_MAP = {
     pending: ["released", "cancelled"],

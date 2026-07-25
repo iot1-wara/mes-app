@@ -60,7 +60,6 @@ async function request(endpoint: string, options: FetchConfig = {}): Promise<any
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     ...options.headers
   };
-  // FormData → let browser set Content-Type with boundary
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -85,7 +84,7 @@ async function request(endpoint: string, options: FetchConfig = {}): Promise<any
     let body: any;
     try { body = await res.json(); } catch {}
     const msg = body?.message || `HTTP ${res.status}`;
-  
+
     if (res.status === 401) {
       showToast("Session abgelaufen. Bitte neu anmelden.", "warning");
     } else if (res.status !== 200 && res.status !== 201) {
@@ -97,52 +96,90 @@ async function request(endpoint: string, options: FetchConfig = {}): Promise<any
     throw err;
   }
 
+  if (res.status === 204) return undefined;
+  if (!res.body) return undefined;
   return res.json();
 }
 
-  async function requestText(endpoint: string, options: FetchConfig = {}): Promise<string> {
-    const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
-    const headers: Record<string, string> = {
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...options.headers
-    };
-    if (!(options.body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-    const config: FetchConfig = {
-      headers,
-      ...options,
-    };
-    if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
-      config.body = JSON.stringify(config.body);
-    }
-
-    let res: Response;
-    try {
-      res = await fetch(url, config);
-    } catch (err: any) {
-      const msg = err.message || "Network error";
-      showToast(`Verbindungsfehler: ${msg}`, "error");
-      throw new Error(msg);
-    }
-
-    if (!res.ok) {
-      let body: any;
-      try { body = await res.json(); } catch {}
-      const msg = body?.message || `HTTP ${res.status}`;
-      showToast(msg, "error");
-      const err = new Error(msg) as Error & { status: number };
-      err.status = res.status;
-      throw err;
-    }
-
-    return res.text();
+async function requestDel(endpoint: string, options: FetchConfig = {}): Promise<void> {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+  const headers: Record<string, string> = {
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...options.headers
+  };
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
   }
+  const config: FetchConfig = {
+    headers,
+    method: "DELETE",
+    ...options,
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, config);
+  } catch (err: any) {
+    showToast(`Verbindungsfehler: ${err.message}`, "error");
+    throw new Error(err.message);
+  }
+
+  if (!res.ok) {
+    let body: any;
+    try { body = await res.json(); } catch {}
+    const msg = body?.message || `HTTP ${res.status}`;
+    showToast(msg, "error");
+    const err = new Error(msg) as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+
+  return undefined;
+}
+
+async function requestText(endpoint: string, options: FetchConfig = {}): Promise<string> {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+  const headers: Record<string, string> = {
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...options.headers
+  };
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  const config: FetchConfig = {
+    headers,
+    ...options,
+  };
+  if (config.body && typeof config.body === "object" && !(config.body instanceof FormData)) {
+    config.body = JSON.stringify(config.body);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, config);
+  } catch (err: any) {
+    const msg = err.message || "Network error";
+    showToast(`Verbindungsfehler: ${msg}`, "error");
+    throw new Error(msg);
+  }
+
+  if (!res.ok) {
+    let body: any;
+    try { body = await res.json(); } catch {}
+    const msg = body?.message || `HTTP ${res.status}`;
+    showToast(msg, "error");
+    const err = new Error(msg) as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+
+  return res.text();
+}
 
 export const api = {
   get: (endpoint: string, body?: any, extra?: any) => request(endpoint, { method: "GET", body, ...extra }),
   post: (endpoint: string, body: any, extra?: any) => request(endpoint, { method: "POST", body, ...extra }),
   patch: (endpoint: string, body: any) => request(endpoint, { method: "PATCH", body }),
-  del: (endpoint: string) => request(endpoint, { method: "DELETE" }),
+  del: (endpoint: string) => requestDel(endpoint),
   getText: (endpoint: string, extra?: any) => requestText(endpoint, { method: "GET", ...extra }),
 };
