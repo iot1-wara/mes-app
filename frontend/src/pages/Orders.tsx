@@ -20,6 +20,15 @@ export default function OrdersPage() {
     api.get("/machines").then((d) => { if (Array.isArray(d)) setMachines(d); }).catch(() => {});
   }, []);
 
+   // Poll orders every 5 seconds for real-time updates from MQTT/webshop
+   useEffect(() => {
+     const interval = setInterval(() => {
+       api.get("/orders").then((d) => { if (Array.isArray(d)) setOrders(d); }).catch(() => {});
+       api.get("/orders/stats").then((s) => { if (s) setStats(s); }).catch(() => {});
+     }, 5000);
+     return () => clearInterval(interval);
+   }, []);
+
   const refreshOrders = () => {
     Promise.all([
       api.get("/orders").then((d) => { if (Array.isArray(d)) setOrders(d); }).catch((e:any) => console.error("refresh orders fail:", e.message)),
