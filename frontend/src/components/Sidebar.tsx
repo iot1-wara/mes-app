@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: "📊" },
+  { path: "/orders", label: "Aufträge", icon: "📋" },
   { path: "/control", label: "Produktionssteuerung", icon: "🏭" },
   { path: "/machines", label: "Stationen", icon: "⚙️" },
-  { path: "/orders", label: "Aufträge", icon: "📋" },
-  { path: "/carriers", label: "Werkstücktraeger", icon: "🏭" },
+  { path: "/carriers", label: "Werkstückträger", icon: "🏭" },
   { path: "/alarms", label: "Alarme", icon: "🔔" },
   { path: "/traces", label: "Traces", icon: "📈" },
   { path: "/edge", label: "Edge Gateway", icon: "🌐" },
@@ -38,11 +38,11 @@ export default function Sidebar() {
   return (
     <div className="sticky top-0 h-screen w-[var(--sidebar-width)] bg-neutral-black flex flex-col">
       <div className="p-5 border-b border-[rgba(255,255,255,0.1)] flex items-center gap-3">
-        <img src="/logo.jpg" alt="MES Logo" className="flex-shrink-0 w-28 object-contain" />
         <div>
-          <h1 className="text-lg font-bold tracking-wide text-neutral-black"><span className="text-brand-primary">MES </span>Edge</h1>
-          <p className="text-xs text-neutral-light mt-1">Process Gateway</p>
+          <h1 className="text-lg font-bold tracking-wide text-neutral-black">Wara <span className="text-brand-primary">MES</span></h1>
+          <p className="text-xs text-neutral-light mt-1">Smart Production</p>
         </div>
+        <img src="/logo.jpg" alt="MES Logo" className="flex-shrink-0 w-28 object-contain" />
       </div>
 
       <nav className="flex-1 py-3 px-2 space-y-0.5">
@@ -67,11 +67,7 @@ export default function Sidebar() {
 
       <div className="p-3 border-t border-[rgba(255,255,255,0.1)]">
         <button onClick={() => { logoutUser(); window.location.href = "/"; }} className="w-full py-2 text-sm text-status-error hover:text-status-error-dark font-medium rounded-md hover:bg-status-error-bg transition-colors">Abmelden</button>
-        <div className="flex items-center gap-2 text-xs text-neutral-light mt-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
-          Edge aktiv
-        </div>
-        <button onClick={toggleLang} className="w-full py-2 mt-2 text-xs font-mono border border-[rgba(255,255,255,0.1)] rounded-md text-neutral-light hover:bg-neutral-stroke">
+        <button onClick={toggleLang} className="w-full py-2 text-xs font-mono border border-[rgba(255,255,255,0.1)] rounded-md text-neutral-light hover:bg-neutral-stroke">
           {lang.toUpperCase()}
         </button>
       </div>

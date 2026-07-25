@@ -111,6 +111,7 @@ interface StationData {
   address: string;
   nodesResolved: boolean;
   currentCarrierId?: string | null;
+  lastEventAt?: string;
 }
 
 @Injectable()
