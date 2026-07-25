@@ -19,10 +19,20 @@ interface DpRecord {
   status: string;
 }
 
+interface AlarmRecord {
+  id: string;
+  message: string;
+  severity: string;
+  machine_id?: string;
+  acknowledged_at?: string | null;
+}
+
 interface MachineItem {
   id: string;
   name: string;
   status: string;
+  location?: string;
+  opcua_station_id?: number | null;
 }
 
 function getBallColor(name: string): string {
@@ -237,6 +247,9 @@ export default function ProductionControlPage() {
   const [advanceLoading, setAdvanceLoading] = useState<Record<string, boolean>>({});
   const [dispatching, setDispatching] = useState<Record<string, boolean>>({});
   const [handshakeStatuses, setHandshakeStatuses] = useState<Record<string, Record<string, any>>>({});
+  const [alarmsList, setAlarmsList] = useState<AlarmRecord[]>([]);
+  const [edgeDash, setEdgeDash] = useState<{ stations: any[]; machines: any[] } | null>(null);
+  const [opcuaConfig, setOpcuaConfig] = useState<any[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -273,6 +286,16 @@ export default function ProductionControlPage() {
         (async () => {
           const alarmData = await api.get('/alarms/active').catch(() => []);
           if (Array.isArray(alarmData)) setAlarmsList(alarmData as AlarmRecord[]);
+        })(),
+        // Edge Dashboard — explizites Mapping von OPC UA Station ↔ Maschine
+        (async () => {
+          const dash = await api.get('/edge/dashboard').catch(() => null);
+          if (dash) setEdgeDash(dash as any);
+        })(),
+        // OPC UA Config für Zuordnung
+        (async () => {
+          const conf = await api.get('/edge/opcua/config').catch(() => []);
+          if (Array.isArray(conf)) setOpcuaConfig(conf as any[]);
         })(),
       ]);
     } finally {
@@ -319,11 +342,33 @@ export default function ProductionControlPage() {
     }
   }, [loadData]);
 
-  const stationsWithDpdata = machines.map(machine => ({
-    machine,
-    dp: dbProcessData.find(dp => dp.next_resource_id === parseInt(machine.id?.split('-')?.pop() || '0'))
-      ?? null,
-  }));
+  // Explizite Zuordnung über edge dashboard (opcuaStationId ↔ machine.id) + opcua config
+  const stationsWithDpdata = machines.map(machine => {
+    // Finde passende OPC UA Station für diese Maschine
+    let matchingStation: any = null;
+    let matchingConfig: any = null;
+    
+    if (edgeDash) {
+      matchingStation = edgeDash.stations.find((s: any) => s.machineName === machine.name);
+    }
+    if (!matchingStation && opcuaConfig) {
+      // Fallback auf OPC UA Config Map
+      const matchIds = machines.filter(m => m.opcua_station_id).map(m => ({ id: m.opcua_station_id ?? 0, name: m.name }));
+      matchingConfig = matchIds.find(m => m.id === machine.opcua_station_id) ? opcuaConfig.find((c: any) => c.id === machine.opcua_station_id) : null;
+    }
+
+    const carrierCarrierId = dbProcessData.find(
+      dp => dp.next_resource_id === machine.opcua_station_id || 
+            dp.iResourceID === machine.opcua_station_id
+    );
+
+    return {
+      machine,
+      dp: carrierCarrierId || null,
+      matchingStation: matchingStation || null,
+      matchingConfig: matchingConfig || null,
+    };
+  });
 
   if (loading) {
     return <div className="pl-[var(--sidebar-width)] flex-1 bg-neutral-50 flex items-center justify-center">

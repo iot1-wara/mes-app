@@ -13,148 +13,103 @@ interface MockPlcState {
   carrier_id: string;
 }
 
-const DataType = nodeOpcua.DataType;
-const STRING_TYPE_CODE: string = 'string';
+export interface MockPlcStationConfig {
+  id: number;
+  port: number;
+  address: string;
+  name: string;
+  state?: Partial<MockPlcState>;
+}
 
 // Variable definitions for the mock PLC namespace
 const VARIABLES = [
-  { nodeId: 'ns=1;s=mockPlc:xQryBusy', dataType: DataType.Boolean },
-  { nodeId: 'ns=1;s=mockPlc:xStart', dataType: DataType.Boolean },
-  { nodeId: 'ns=1;s=mockPlc:xAck', dataType: DataType.Boolean },
-  { nodeId: 'ns=1;s=mockPlc:xEnd', dataType: DataType.Boolean },
-  { nodeId: 'ns=1;s=mockPlc:iStepNo', dataType: DataType.Int32 },
-  { nodeId: 'ns=1;s=mockPlc:xErrL0', dataType: DataType.Int32 },
-  { nodeId: 'ns=1;s=mockPlc:xErrL1', dataType: DataType.Int32 },
-  { nodeId: 'ns=1;s=mockPlc:xErrL2', dataType: DataType.Int32 },
-  { nodeId: 'ns=1;s=mockPlc:carrier_id', dataType: DataType.String },
+  { nodeId: 'ns=1;s=stMES:xQryBusy', dataType: nodeOpcua.DataType.Boolean },
+  { nodeId: 'ns=1;s=stMES:xStart', dataType: nodeOpcua.DataType.Boolean },
+  { nodeId: 'ns=1;s=stMES:xAck', dataType: nodeOpcua.DataType.Boolean },
+  { nodeId: 'ns=1;s=stMES:xDone', dataType: nodeOpcua.DataType.Boolean },
+  { nodeId: 'ns=1;s=stMes:xErrL0', dataType: nodeOpcua.DataType.Int32 },
+  { nodeId: 'ns=1;s=stMeS:xErrL1', dataType: nodeOpcua.DataType.Int32 },
 ];
 
 export class MockPlcServer extends EventEmitter {
-  private server: any = null;
-  private port: number;
-  private addressSpace: any;
-  private readonly state: MockPlcState = {
-    xStart: false,
-    xAck: false,
-    xEnd: false,
-    iStepNo: 0,
-    xQryBusy: false,
-    xErrL0: 0,
-    xErrL1: 0,
-    xErrL2: 0,
-    carrier_id: '',
-  };
-
-  constructor(port?: number) {
-    super();
-    this.port = port ?? 5500;
+  private servers = new Map<number, any>();
+  private states = new Map<number, MockPlcState>();
+  
+  getStation(port: number): MockPlcState | undefined {
+    return this.states.get(port);
   }
 
-  getState(): MockPlcState {
-    return { ...this.state };
-  }
+  async start(configs: Partial<MockPlcStationConfig>[]): Promise<void> {
+    const ports = configs.map(c => c.port ?? (5500 + (c.id ?? 1)));
+    
+    for (const config of configs) {
+      const port = config.port ?? (5500 + (config.id ?? 1));
+      const state = { ...MockPlcServer.createDefaultState(), ...config.state };
+      this.states.set(port, state);
 
-  async start(): Promise<void> {
-    this.server = new nodeOpcua.OPCUAServer({ port: this.port });
+      const server = new nodeOpcua.OPCUAServer({ port });
+      await server.start();
 
-    await this.server.start();
+      const addressSpace = (server as any).addressSpace;
+      const namespace = addressSpace.getOwnNamespace();
 
-    this.addressSpace = this.server.addressSpace;
-    const namespace = this.addressSpace.getOwnNamespace();
-
-    // Create a mockPLC folder as organizing node
-    const rootObjects = namespace.objectsFolder;
-    const mockFolder = namespace.addFolder({
-      organizedBy: rootObjects,
-      browseName: 'mockPLC',
-    });
-
-    // Register all variables on the server with current values
-    for (const v of VARIABLES) {
-      const nodeValue = this.getNodeValue(v.nodeId.split(':')[1].replace('mockPlc:', ''));
+      // Create station folder and stMES/dbProcessData hierarchy
+      const rootObjects = namespace.objectsFolder;
+      const stationFolder = namespace.addFolder({ organizedBy: rootObjects, browseName: config.name || `Station ${config.id}` });
       
-      namespace.addVariable({
-        componentOf: mockFolder,
-        nodeId: v.nodeId,
-        browseName: v.nodeId.split(':')[1],
-        dataType: v.dataType,
-        accessor: 'master',
-        value: {
-          value: nodeValue.value as never,
-          valueType: nodeValue.typeCode,
-        },
-      });
+      const smesFolder = namespace.addFolder({organizedBy: stationFolder,browseName: 'stMES'});
+      
+
+      // Register all stMES variables
+      for (const v of VARIABLES) {
+        const fieldName = v.nodeId.split(':')[1]?.split('stMES:')?.[1];
+        if (!fieldName) continue;
+        
+        const valueKey = fieldName as keyof MockPlcState;
+        const nodeValue = state[valueKey] ?? 0;
+
+        namespace.addVariable({
+          organizedBy: smesFolder,
+          nodeId: v.nodeId.replace('stMES', `station${config.id}`),
+          browseName: fieldName,
+          dataType: v.dataType,
+          accessor: 'master',
+          value: {value: nodeValue as never, valueType: String(v.dataType)},
+        });
+      }
+
+      // Register dbProcessData variables (carrier ID, step number, resource ID, params)
+      const dbProcessFolder = namespace.addFolder({ organizedBy: stationFolder, browseName: 'dbProcessData' });
+
+      const dbFields = [
+        { nodeId: `ns=1;s=dbProcessData${config.id}:iCarrierID`, dataType: nodeOpcua.DataType.Int32 },
+        { nodeId: `ns=1;s=dbProcessData${config.id}:iStepNo`, dataType: nodeOpcua.DataType.Int16 },
+        { nodeId: `ns=1;s=dbProcessData${config.id}:iResourceID`, dataType: nodeOpcua.DataType.Int16 },
+        { nodeId: `ns=1;s=dbProcessData${config.id}:iPar1`, dataType: nodeOpcua.DataType.Int16 },
+        { nodeId: `ns=1;s=dbProcessData${config.id}:iPar2`, dataType: nodeOpcua.DataType.Int16 },
+      ];
+
+      for (const v of dbFields) {
+          const fieldName = v.nodeId.split(':')[1]?.split(':dbProcessData')?.[1];
+          if (!fieldName) continue;
+          
+          namespace.addVariable({ organizedBy: dbProcessFolder, nodeId: v.nodeId, browseName: fieldName, dataType: v.dataType, accessor: 'master', value: { value: 0 as never, valueType: String(v.dataType)} });
+      }
+
+      this.servers.set(port, server);
     }
 
-    // Set up read/write handlers
-    this.setupReadHandler();
-    
-    console.log(`[MockPlcServer] Listening on port ${this.port}`);
+  console.log(`[MockPlcServer] Started ${configs.length} mock station(s)`);
   }
 
-  private getNodeValue(variableName: string): { value: any; typeCode: string } {
-    switch (variableName) {
-      case 'xStart': return { value: this.state.xStart, typeCode: String(DataType.Boolean) };
-      case 'xAck': return { value: this.state.xAck, typeCode: String(DataType.Boolean) };
-      case 'xEnd': return { value: this.state.xEnd, typeCode: String(DataType.Boolean) };
-      case 'xQryBusy': return { value: this.state.xQryBusy, typeCode: String(DataType.Boolean) };
-      case 'iStepNo': return { value: this.state.iStepNo, typeCode: String(DataType.Int32) };
-      case 'xErrL0': return { value: this.state.xErrL0, typeCode: String(DataType.Int32) };
-      case 'xErrL1': return { value: this.state.xErrL1, typeCode: String(DataType.Int32) };
-      case 'xErrL2': return { value: this.state.xErrL2, typeCode: String(DataType.Int32) };
-      case 'carrier_id': return { value: this.state.carrier_id, typeCode: STRING_TYPE_CODE };
-      default: return { value: 0, typeCode: String(DataType.Int32) };
-    }
-  }
-
-  private setupReadHandler(): void {
-    if (!this.server || !this.addressSpace) return;
-
-    const serverEngine = this.server.engine!;
-    
-    // Intercept writes from MES → PLC client
-    serverEngine.registerWriteHandler = (nodeId: any, handler: Function) => {
-      console.log(`[MockPlcServer] Write registration on ${nodeId}`);
-    };
-  }
-
-  async setXStart(value: boolean): Promise<void> {
-    this.state.xStart = value;
-    if (value) {
-      this.emit('xStart', { xStart: true, xAck: false, carrier_id: this.state.carrier_id, iStepNo: this.state.iStepNo });
-    }
-  }
-
-  async setxAck(value: boolean): Promise<void> {
-    this.state.xAck = value;
-  }
-
-  async setXEnd(value: boolean): Promise<void> {
-    this.state.xEnd = value;
-  }
-
-  async setIStepNo(value: number): Promise<void> {
-    this.state.iStepNo = value;
-  }
-
-  async setXQryBusy(value: boolean): Promise<void> {
-    this.state.xQryBusy = value;
-    this.emit('xQryBusy', { xQryBusy: value, timestamp: Date.now() });
-  }
-
-  async setCarrierId(id: string): Promise<void> {
-    this.state.carrier_id = id;
-  }
-
-  async setError(level: 'xErrL0' | 'xErrL1' | 'xErrL2', value: number): Promise<void> {
-    const k = level as keyof MockPlcState;
-    (this.state as any)[k] = value;
+  private static createDefaultState() {
+    return {
+      xStart: false, xAck: false, xEnd: false, iStepNo: 0, 
+      xQryBusy: false, xErrL0: 0, xErrL1: 0, xErrL2: 0, carrier_id: '' };
   }
 
   async stop(): Promise<void> {
-    if (this.server) {
-      await this.server.shutdown();
-      this.server = null;
-    }
+    for (const [, server] of this.servers) { await server.shutdown().catch(() => {}); }
+    this.servers.clear();
   }
 }

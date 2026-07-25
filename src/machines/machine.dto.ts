@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
 
 export type MachineStatus = 'online' | 'offline' | 'maintenance' | 'error' | 'idle';
 
@@ -54,4 +54,8 @@ export class UpdateMachineDto {
   @IsOptional()
   @IsString()
   serial_number?: string;
+
+  @IsOptional()
+  @IsInt()
+  opcua_station_id?: number;
 }

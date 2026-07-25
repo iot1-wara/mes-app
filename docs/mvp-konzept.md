@@ -223,6 +223,77 @@ Alle MVP-Phase-9-Aufgaben sind umgesetzt und produktionsbereit:
 ### Noch ausstehend (nicht-blockierend)
 | Aufgabe | Priorität | Status |
 |---------|-----------|--------|
-| OPC UA Node-Tree Analyse mit PLC-Hersteller (9.3.1) | Critical | ⬜ pending — benötigt PLC-spezifische Info |
-| GitHub Secrets konfiguriert (I.6-I.8) | High | ⬜ pending — manueller Schritt im Settings |
+| OPC UA Node-Tree Analyse mit PLC-Hersteller (9.3.1) | Critical | ✅ done — Phase 10 S7-1500 Node Discovery implementiert (v1.6) |
+| GitHub Secrets konfiguriert (I.6-I.8) | High | ⬜ pending — manueller Schritt im Repo Settings |
 | Production Server Provisioning | High | ⬜ pending — benötigt real server access |
+
+---
+
+## 6. Phase 10 — Siemens S7-1500 OPC UA Node Discovery (v1.6)
+
+Implementiert: Multi-Pattern Node-ID Resolver mit TIA Portal Address Space discovery.
+
+Der OPC UA Service versucht nun automatisch die richtigen Node-IDs zu finden:
+
+1. **Browse Discovery** — Durchsucht den Address Space nach DB-Blöcken (stMES, dbProcessData, DB151)
+2. **Member Enumeration** — Enumeriert die Strukturmitglieder eines gefundenen DB-Blocks via OPC UA browse
+3. **Multi-Pattern Fallback** — Wenn keine Discovery möglich:
+   - S7 Compact Format: `ns=N;s=DB151:XStart`
+   - TIA Portal Style: `ns=N;s=stMES|xStart` oder `ns=N;s=stMES_XStart`
+   - Direct Prefix: `ns=N;s=<prefix>XStart` (konfigurierbar)
+4. **Field Name Aliasing** — 40+ Varianten pro Feld für verschiedene TIA Portal Coding Standards
+
+Konfiguration in `.env`:
+```ini
+OPC_UA_STATIONS=[
+  {
+    "id":1,
+    "address":"opc.tcp://192.168.1.100:4840",
+    "name":"Station 1",
+    "nodePrefix":"PLC1.",
+    "stMesDbName":"stMES",
+    "dbProcessDataDbName":"DB151"
+  }
+]
+OPC_UA_USERNAME=administrator
+OPC_UA_PASSWORD=my_password
+```
+
+Bei den Default-Einstellungen (leere nodePrefix, stMesDbName=stMES, dbProcessDataDbName=dbProcessData) findet der Service die meisten TIA Portal Konfigurationen automatisch.
+
+### Station-zu-Maschine Zuordnung (Edge Gateway Config)
+Die Edge Gateway Config-Seite (`/edge`) erlaubt im Admin-Tab jede OPC UA Station einer Maschine zuzuordnen via `opcua_station_id` FK auf der Machine-Tabelle. Das Mapping wird über einen neuen Dashboard-Endpoint bereitgestellt:
+
+| Endpoint | Zweck |
+|----------|-------|
+| `GET /edge/dashboard` | liefert alle 3 Schichten kombiniert: OPC-UA-Stations + Maschinen + Carrier |
+| `PUT/PATCH /edge/opcua/config` | speichert Station Config in JSON-Datei + aktualisiert Environment |
+| `POST /edge/opcua/config/reload` | hot-reload der OPC UA Verbindungen ohne App-Neustart |
+
+### Werkstückträger-zu-Station Live-Zuordnung (v1.7)
+Die implizite Zuordnung via `iResourceID ↔ machine.ID-Suffix` wurde durch ein explizites Mapping ersetzt:
+
+| Schicht | Mechanismus | Quelle |
+|---------|-------------|--------|
+| OPC UA Service | `StationData.currentCarrierId` trackt letzten `iCarrierID` pro Station via dbProcessDataChange Event | `opcua.service.ts:stationData` |
+| Edge Controller | enriches Station-Status mit `machineName` via `opcua_station_id` FK auf `MachineEntity` | `edge.controller.ts:/edge/dashboard` |
+| Frontend ProductionControl | nutzt `dbProcessData.next_resource_id === machine.opcua_station_id` statt impliziter UUID-Parsing | `ProductionControl.tsx:stationsWithDpdata` |
+
+Datenfluss während der Produktion:
+```
+1. SPS sendet iCarrierID → OpcUaService.trackt currentCarrierId pro Station
+2. Edge Dashboard API enriches Status mit Machine-Namen via opcua_station_id FK
+3. ProductionControl nutzt edgeDashboard für korrekte Zuordnung: Maschine ↔ OPC UA Station ↔ Carrier
+```
+
+Die implizite `parseInt(machine.id.split('-').pop())` Logik wurde durch explizites Mapping ersetzt — stabilisierend bei Änderungen der Maschinen-ID-Formatierung und Eliminierung von Suffix-Kollisionen.
+
+---
+
+## 7. Version History
+
+| Version | Datum | Beschreibung |
+|---------|-------|--------------|
+| v1.5 | July 2026 | Phase 9: Carrier dbProcessData-Felder, SpsDispatcher, WebSocket Protocol |
+| v1.6 | July 2026 | Phase 10: Siemens S7-1500 OPC UA Node Discovery mit Multi-Pattern Resolver |
+| v1.7 | July 2026 (today) | Edge Gateway Config UI + Station-Maschine FK + Werkstuicktraeger-zu-Station Live-Zuordnung |

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { OpcUaModule } from './opcua.module';
 import { EdgeController } from './edge.controller';
-import { MqttGatewayService } from './mqtt-gateway.service';
+import { MachineEntity } from '../machines/machine.entity';
 
 @Module({
-  imports: [OpcUaModule],
+  imports: [OpcUaModule, TypeOrmModule.forFeature([MachineEntity])],
   controllers: [EdgeController],
-  providers: [MqttGatewayService],
-  exports: [MqttGatewayService],
+  exports: [OpcUaModule],
 })
 export class EdgeGatewayModule {}

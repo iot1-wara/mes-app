@@ -1,10 +1,8 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Like } from 'typeorm';
 import { CarrierEntity } from './carrier.entity';
-import { OpcUaService } from '../opcua/opcua.service';
-import { MqttGatewayService } from '../opcua/mqtt-gateway.service';
+import { OpcUaService, OpcUaEvent, OpcUaEventType, DbProcessDataEntry } from '../opcua/opcua.service';
 
 // BigInt-safe iCarrierID (dbProcessData Int(128)) <-> MES Carrier-ID Cast
 const INT128_MAX = 340282366920938463463374607431768211455;
@@ -76,38 +74,40 @@ export interface SpsDispatchResult {
 @Injectable()
 export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SpsDispatcherService.name);
-  private subscriptions = new Map<string, () => void>();
-  private dispatchQueue: Array<{ carrierId: string; iResourceID?: number; timestamp: number }> = [];
+  private opcuaEventListener: ReturnType<OpcUaService['on']> | null = null;
+  private dispatchQueue: Array<{ carrierId: string; stationId?: number; timestamp: number }> = [];
   private isProcessing = false;
 
   constructor(
     @InjectRepository(CarrierEntity)
     private readonly carriersRepo: Repository<CarrierEntity>,
     private readonly opcuaService: OpcUaService,
-    private readonly mqttService: MqttGatewayService,
   ) {}
 
   onModuleInit() {
     this.logger.log('SPS Dispatcher initialized');
-    
-    const sub1 = this.mqttService.onMessage('mes/production/+/#', (data: any) => {
-      this.handleProductionEvent('mes/production', data);
+
+    // Listen to all OPC UA events from all stations
+    this.opcuaEventListener = this.opcuaService.on('xStart', (event: OpcUaEvent) => {
+      this.handleOpcUaEvent(event).catch(e => {
+        this.logger.error(`Error handling OPC UA event: ${e.message}`);
+      });
     });
-    this.subscriptions.set('mes/production/#', sub1);
-    
+
     return Promise.resolve();
   }
 
   onModuleDestroy() {
-    this.subscriptions.forEach(unsub => unsub());
-    this.subscriptions.clear();
+    if (this.opcuaEventListener) {
+      this.opcuaEventListener();
+    }
   }
 
   // === Primary dispatch entry point ===
 
-  async dispatch(carrierId: string, iResourceID?: number): Promise<SpsDispatchResult> {
+  async dispatch(carrierId: string, stationId?: number): Promise<SpsDispatchResult> {
     if (this.isProcessing) {
-      this.dispatchQueue.push({ carrierId, iResourceID, timestamp: Date.now() });
+      this.dispatchQueue.push({ carrierId, stationId, timestamp: Date.now() });
       return { 
         success: false, 
         carrierId, 
@@ -120,11 +120,6 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const next = this.dispatchQueue.shift();
-      if (next) {
-        this.dispatchQueue.push(next);
-      }
-      
       this.isProcessing = true;
 
       // Find the carrier by WERKST-XXX or numeric ID
@@ -145,20 +140,20 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
       // Step 1: Read current dbProcessData from carrier entity (all 7 fields)
       const dbData = this.extractDbProcessData(carrierEntity);
 
-      // Step 2: MES -> SPS Write xQryBusy=true
-      const writeXqyBusy = await this.writeStMesQuery('xQryBusy', true, iResourceID ?? carrierEntity.iResourceID);
-      if (!writeXqyBusy) {
+      // Step 2: MES -> SPS Write xQryBusy=true to correct station via OPC UA
+      const writeSuccess = await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'xQryBusy', true);
+      if (!writeSuccess) {
         return { 
           ...dbData, 
           success: false, 
           handshakeDone: false, 
-          error: 'xQryBusy write failed to SPS',
+          error: 'xQryBusy write failed to SPS via OPC UA',
           xErrL0: 1 
         };
       }
 
-      // Step 3: Wait for SPS response (xStart with matching carrierId)
-      const ack = await this.waitForStMesAck(carrierEntity.name, iResourceID ?? carrierEntity.iResourceID);
+      // Step 3: Wait for SPS response (xDone) with matching carrierId
+      const ack = await this.waitForStMesAck(carrierEntity.name, stationId ?? carrierEntity.iResourceID);
 
       if (!ack.xStart) {
         return { 
@@ -171,16 +166,16 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Step 4: MES -> SPS Acknowledge with iStepNo + write dbProcessData fields
-      await this.writeStMesQuery('xAck', true, iResourceID ?? carrierEntity.iResourceID);
-      await this.writeStMesQuery('iStepNo', ack.iStepNo ?? carrierEntity.iStepNo, iResourceID ?? carrierEntity.iResourceID);
+      await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'xAck', true);
+      await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'iStepNo', ack.iStepNo ?? carrierEntity.iStepNo);
       
-      if (carrierEntity.iPar1) await this.writeStMesQuery('iPar1', carrierEntity.iPar1, iResourceID ?? carrierEntity.iResourceID);
-      if (carrierEntity.iPar2) await this.writeStMesQuery('iPar2', carrierEntity.iPar2, iResourceID ?? carrierEntity.iResourceID);
-      if (carrierEntity.iPar3) await this.writeStMesQuery('iPar3', carrierEntity.iPar3, iResourceID ?? carrierEntity.iResourceID);
-      if (carrierEntity.iPar4) await this.writeStMesQuery('iPar4', carrierEntity.iPar4, iResourceID ?? carrierEntity.iResourceID);
+      if (carrierEntity.iPar1) await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'iPar1', carrierEntity.iPar1);
+      if (carrierEntity.iPar2) await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'iPar2', carrierEntity.iPar2);
+      if (carrierEntity.iPar3) await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'iPar3', carrierEntity.iPar3);
+      if (carrierEntity.iPar4) await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'iPar4', carrierEntity.iPar4);
 
       // Set xDone=true on SPS side (MES has answered)
-      await this.writeStMesQuery('xDone', true, iResourceID ?? carrierEntity.iResourceID);
+      await this.opcuaService.writeStMesQuery(stationId ?? carrierEntity.iResourceID!, 'xDone', true);
 
       // Update entity with new iStepNo from SPS ack
       if (ack.iStepNo !== undefined) {
@@ -219,10 +214,8 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
 
     // Match numeric: "042" -> "WERKST-042"
     const numericMatch = String(idOrName).match(/\d+/);
-    if (numericMatch && this.carriersRepo != null) {
-      const pattern = `WERKST-${String(parseInt(numericMatch[0], 10)).padStart(3, '0')}`;
-      
-      // Also try direct iCarrierID numeric match
+    if (numericMatch) {
+      // Try direct iCarrierID numeric match
       for (const c of await this.carriersRepo.find()) {
         if (c.iCarrierID !== null && String(c.iCarrierID) === numericMatch[0]) {
           return c;
@@ -254,96 +247,57 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  // === Write sMES Query fields to OPC UA / MQTT ===
-  private async writeStMesQuery(fieldName: string, value: any, resourceId?: number): Promise<boolean> {
-    const resourceTag = resourceId ? `r${resourceId}` : 'unknown';
-    
-    // Try OPC UA write first
-    try {
-      if (this.opcuaService.isConnected && this.opcuaService.isConnected()) {
-        const opcUaNode = `ns=1;s=stMES/${resourceTag}:${fieldName}`;
-        return true;
-      } else {
-        this.logger.debug(`OPC UA not connected for ${fieldName}, falling back to MQTT`);
-      }
-    } catch (opcErr) {
-      this.logger.warn(`OPC UA write to ${fieldName} failed: ${(opcErr as Error).message}`);
-    }
-
-    // Fallback: MQTT publish (for production deployment per station)
-    try {
-      await this.mqttService.publish(
-        `mes/production/${resourceTag}/dbprocessdata`,
-        { action: 'write', field: fieldName, value, timestamp: new Date().toISOString() }
-      );
-      
-      // Check for error result in MQTT response (xError flag from SPS)
-      if (value === false && fieldName === 'xDone') {
-        this.logger.warn(`SPS rejected xDone for ${resourceTag}, possible xError`);
-        return false;
-      }
-      return true;
-    } catch (mqttErr) {
-      this.logger.error(`MQTT write to ${fieldName} failed: ${(mqttErr as Error).message}`);
-      return false;
-    }
-  }
-
-  // === Wait for SPS xStart response with carrierId match ===
-  private async waitForStMesAck(expectedCarrierId: string, resourceId?: number): Promise<SpsHandshakeAck> {
-    const timeout = 5000;
-    const startTime = Date.now();
-    
+  // === Wait for SPS xStart response via OPC UA event ===
+  private async waitForStMesAck(expectedCarrierId: string, stationId?: number): Promise<SpsHandshakeAck> {
     return new Promise<SpsHandshakeAck>((resolve) => {
-      // Subscribe to xStart for this resource
-      const topic = `mes/production/${resourceId ? `r${resourceId}` : '+'}/xStart`;
-      
-      const sub = this.mqttService.onMessage(topic, (data: any) => {
-        if (data.carrier_id?.toUpperCase().includes(expectedCarrierId.toUpperCase()) ||
-            data.resource_id === resourceId ||
-            topic.includes(String(resourceId))) {
-          
+      const timeout = 5000;
+
+      const unsubscribe = this.opcuaService.on('stMesStateChange', (event: OpcUaEvent) => {
+        if (stationId && event.stationId !== stationId) return;
+
+        const data = event.data as any;
+        const carrierMatch = data.carrier_id?.toUpperCase().includes(expectedCarrierId.toUpperCase()) ||
+                            String(data.uiCarrierId)?.toUpperCase() === expectedCarrierId.toUpperCase();
+
+        if (data.xDone || carrierMatch) {
+          unsubscribe();
           resolve({
             xStart: true,
             xAck: false,
-            carrier_id: data.carrier_id ?? expectedCarrierId,
+            carrier_id: data.uiCarrierId ?? expectedCarrierId,
             iStepNo: data.iStepNo ?? 0,
           });
         }
       });
 
       const timer = setTimeout(() => {
-        sub();
+        unsubscribe();
         resolve({ xStart: false, xAck: false });
       }, timeout);
-
-      // Cleanup on success (handled by MQTT subscription)
     });
   }
 
-  // === Handle production events from SPS/MQTT ===
-  private async handleProductionEvent(topic: string, data: any): Promise<void> {
-    this.logger.log(`SPS Event: ${topic}`);
+  // === Handle xStart event from OPC UA subscription ===
+  private async handleOpcUaEvent(event: OpcUaEvent): Promise<void> {
+    this.logger.log(`OPC UA Event received: ${event.type} from Station ${event.stationId}`);
 
-    if (data.carrier_id) {
-      const carrierId = int128toString(data.carrier_id);
-      
-      // Check for errors
-      if (data.xErrL0 || data.xErrL1 || data.xErrL2) {
-        this.logger.warn(`Error from SPS: L0=${data.xErrL0}, L1=${data.xErrL1}, L2=${data.xErrL2}`);
-        // Emit alarm event for Dashboard
-      }
+    const data = event.data as DbProcessDataEntry;
+    
+    if (!data?.iCarrierID) return;
 
-      // Dispatch automatically if xStart detected
-      if (data.xStart) {
-        this.dispatch(carrierId, data.resource_id).catch(e => {
-          this.logger.error(`Dispatch failed: ${e.message}`);
-        });
-      }
-    }
+    // Skip if no error flags and not xStart - ignore other noise for now
+    if (event.type !== 'xStart') return;
+
+    const carrierId = int128toString(data.iCarrierID);
+    this.logger.log(`Carrying: ${carrierId} at Station ${event.stationId}`);
+
+    // Dispatch automatically when xStart detected from SPS
+    this.dispatch(carrierId, event.stationId).catch(e => {
+      this.logger.error(`Dispatch failed for station ${event.stationId}: ${e.message}`);
+    });
   }
 
-  getDispatchQueue(): Array<{ carrierId: string; iResourceID?: number; timestamp: number }> {
+  getDispatchQueue(): Array<{ carrierId: string; stationId?: number; timestamp: number }> {
     return [...this.dispatchQueue];
   }
 }

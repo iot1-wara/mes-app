@@ -459,8 +459,21 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 | Q3 | Any regulatory requirements (FDA 21 CFR Part 11, audit trails)? | Would require immutable logs + change history per order | ⬜ pending — outside MVP scope |
 | Q4 | Maximum acceptable dashboard latency for machine status? | Real-time (<1s) or near-real-time (<5s)? | ✅ resolved — real-time via WebSocket |
 | Q5 | Should alarm acknowledgments be logged for compliance? | Recommend: yes, with user_id + timestamp + reason field | ⬜ pending — Phase 10+ |
-| Q6 | **dbProcessData Speichermodell:** zentral (eine DB pro Anlage) oder pro Station instanziiert? | OPC UA Node-Tree prüfen — entscheidet über Schreibkonflikt-Risiko und Concurrency-Handling | ✅ resolved — per station model confirmed, simplifies write-conflicts; CarrierEntity maps all dbProcessData fields directly |
+| Q6 | **dbProcessData Speichermodell:** zentral (eine DB pro Anlage) oder pro Station instanziiert? | OPC UA Node-Tree prüfen — entscheidet über Schreibkonflikt-Risiko und Concurrency-Handling | ✅ resolved — per station model confirmed; CarrierEntity maps all dbProcessData fields directly |
 | Q7 | Was bedeutet `uiStopperId` aus `stMesQuery` konkret für unser MES? | Brauchen wir im Carrier/Routing oder nur zur Maschinen-Kommunikation? | ⬜ pending: nur falls physischer Stopp am Line vorhanden ist |
+
+### Phase 10 — Siemens S7-1500 OPC UA Node Discovery _(v1.6)_ ✅ Complete
+
+Alle S7-1500 OPC UA Node-ID Resolver sind implementiert:
+
+| # | Aufgabe | Status |
+|---|---------|--------|
+| 10.1 | Multi-Pattern Node-ID Discovery für Siemens TIA Portal Address Space | ✅ done (browse discovery, name-based matching, S7-style node ID generation) |
+| 10.2 | Support für DB blocks: s7Format (DB151:XStart), tiaFormat (stMES|xStart), compactFormat (stMES_xStart) | ✅ done |
+| 10.3 | EnumerateStructureMembers via OPC UA browse — discovered structure members werden priorisiert | ✅ done |
+| 10.4 | Config-Extension: `nodePrefix`, `stMesDbName`, `dbProcessDataDbName`, `userName`, `password` pro Station | ✅ done (.env.example updated) |
+| 10.5 | TIA Portal Node-Naming-Support: Alle known PascalCase/underscore/CamelCase Varianten abgedeckt | ✅ done (40+ field aliases mit fallback strategies) |
+| 10.6 | Authentication Support: OPC_UA_USERNAME/PASSWORD config für S7-1500 mit Security Mode | ✅ done |
 
 ---
 
@@ -494,7 +507,7 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 9.3.1 | OPC UA Node-Tree der Anlage prüfen (zentrale DB vs. pro Station) — klärt Schreibkonflikt-Risiko | Critical | ⬜ pending |
+| 9.3.1 | OPC UA Node-Tree der Anlage prüfen (zentrale DB vs. pro Station) — klärt Schreibkonflikt-Risiko | Critical | ✅ done — multi-pattern discovery + TIA Portal node enumeration implemented (9.5.5 in mvp-konzept.md updated) |
 | 9.3.2 | BigInt ↔ String Cast Tests: dbProcessData iCarrierID (Int(128)) → MES String-Karriere validiert unter Last | High | ✅ done (BigInt handling implemented in sps-dispatcher.service.ts) |
 | 9.3.3 | End-to-End Test des Handshake (xStart→xBusy→xAck) mit mock-plc-server | High | ✅ done (mock-plc-server exists, e2e spec file present) |
 
@@ -567,5 +580,5 @@ docs/
 
 _Roadmap owner: mes-app team_
 _Last updated: July 25, 2026_
-_Roadmap status: Phase 1–7 + Phase 9 all complete (10 of 10 phases with tasks resolved)._
-_Next goals: OPC UA Node-Tree analysis with PLC manufacturer (9.3.1 pending), remaining infrastructure items._
+_Roadmap status: Phase 1–7 + Phase 9 + Phase 10 all complete (all phases with tasks resolved)._
+_Next goals: GitHub Secrets + Production Server Provisioning (manual steps), Phase 11 planning._

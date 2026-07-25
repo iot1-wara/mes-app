@@ -31,6 +31,9 @@ export class MachineEntity {
   @Column({ nullable: true })
   serial_number?: string;
 
+  @Column({ nullable: true, type: 'int' })
+  opcua_station_id?: number;
+
   @Column({ type: 'jsonb', nullable: true })
   telemetry!: Record<string, any>;
 
