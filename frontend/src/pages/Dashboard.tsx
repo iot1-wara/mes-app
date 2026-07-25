@@ -195,7 +195,7 @@ export default function DashboardPage() {
               <div className="absolute right-[-8px] top-[-8px] w-16 h-16 rounded-full bg-white/10" />
               <span className="text-xs font-semibold text-white/80 uppercase tracking-wide">Yield Rate</span>
               <div className="flex items-end gap-2 mt-2">
-                <span className="text-[var(--text-4xl-size)] leading-none font-extrabold">{((oeeData.quality / 100) * 100).toFixed(1)}<span className="text-xl text-white/80">%</span></span>
+                <span className="text-[var(--text-4xl-size)] leading-none font-extrabold">{oeeData.quality.toFixed(1)}<span className="text-xl text-white/80">%</span></span>
                 {((oeeData.quality / 100) * 100) >= 95 ? (
                   <svg className="w-5 h-5 text-white/80 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 10l5 5 5-5"/><path d="M7 14l5 5 5-5"/></svg>
                 ) : (
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 <span>Schlechte Teile: {oeeData.quality < 100 ? (100 - oeeData.quality).toFixed(1) : "0.0"}%</span>
               </div>
               <div className="mt-3 w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white/70 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (oeeData.quality / 100) * 100)}%` }} />
+                <div className="h-full bg-white/70 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, oeeData.quality)}%` }} />
               </div>
             </div>
 

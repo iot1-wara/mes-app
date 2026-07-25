@@ -20,6 +20,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "dev:full": "concurrently \"npm run start:dev\" \"npm run dev:front\"",
+    "dev:full:nest": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "dev:front": "node node_modules/vite/bin/vite.js",
     "dev:backend": "npm run start:dev"
   },

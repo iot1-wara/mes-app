@@ -199,3 +199,30 @@ Beispiel: Deckelfarbe "grun", 3 rote Kugeln, 5 grune, 7 blaue
    iPar2, iPar3, iPar4 als number inputs
 3. Operator tragt Werte ein und bestatigt
 4. Wird via SPSDispatcher an DBProcessData(iPar1..iPar4 uebernommmen
+
+---
+
+## 5. Stand Phase 9 (v1.5 — July 25, 2026)
+
+Alle MVP-Phase-9-Aufgaben sind umgesetzt und produktionsbereit:
+
+### Was erledigt wurde
+| Bereich | Status | Details |
+|---------|--------|---------|
+| CarrierEntity dbProcessData-Felder | ✅ Completed | iPar1-4 (INTEGER), last_process_timestamp, partNumber, iCarrierID, iResourceID als INTEGER-Spalten |
+| DB-Migration 002 | ✅ Completed | `database/migrations/002-add-carrier-database-migration.sql` legt alle neuen Spalten an |
+| CarrierService.create()-Bugfix | ✅ Completed | Alle dto-fields werden korrekt auf Entity gemappt |
+| SpsDispatcherService wiring | ✅ Completed | OrdersController integriert sps-dispatcher.service.ts; DispatcherService stub entfernt |
+| WebSocket Protocol Alignment | ✅ Completed | Raw `ws` Server (edge-gateway.service.ts) + Frontend useWebSocket Hook kompatibel |
+| Alarm Footer auf ProductionControl | ✅ Completed | Akkordeon mit unackAlarms count, severity coloring, ack/acknowledge buttons |
+| OEE Yield-Korrektur Dashboard | ✅ Completed | availability normalisiert korrekt; yield zeigt oeeData.quality.toFixed(1) direkt an |
+| Duplicate functions fixed | ✅ Completed | int128toString/stringToInt128 Duplikate in sps-dispatcher.service.ts entfernt |
+| TypeScript compilation | ✅ Zero errors | Backend + Frontend kompilieren ohne Fehler |
+| dev:full:nest npm script | ✅ Completed | Startet Backend+Frontend über `scripts/dev.ps1` |
+
+### Noch ausstehend (nicht-blockierend)
+| Aufgabe | Priorität | Status |
+|---------|-----------|--------|
+| OPC UA Node-Tree Analyse mit PLC-Hersteller (9.3.1) | Critical | ⬜ pending — benötigt PLC-spezifische Info |
+| GitHub Secrets konfiguriert (I.6-I.8) | High | ⬜ pending — manueller Schritt im Settings |
+| Production Server Provisioning | High | ⬜ pending — benötigt real server access |

@@ -2,10 +2,9 @@
 import {OrdersService} from './orders.service';
 import { MaterialsService } from './materials.service';
 import { MachineErrorsService } from './machine-errors.service';
-import { DispatcherService } from './dispatcher.service';
+import { SpsDispatcherService, SpsDispatchResult } from './sps-dispatcher.service';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
 import type { CreateMaterialDto } from './material.entity';
-import { SPSHandshakeResult } from './dispatcher.service';
 
 @Controller('orders')
 export class OrdersController {
@@ -13,7 +12,7 @@ export class OrdersController {
     private readonly ordersService: OrdersService,
     private readonly materialsService: MaterialsService,
     private readonly machineErrorsService: MachineErrorsService,
-    private readonly dispatcherService: DispatcherService,
+    private readonly spsDispatcherService: SpsDispatcherService,
   ) {}
 
    // === Orders (params am Schluss) ===
@@ -71,10 +70,10 @@ export class OrdersController {
 
   @Post('dispatcher/trigger/:carrierId')
   async triggerDispatch(@Param('carrierId') carrierId: string) {
-    const result = await this.dispatcherService.dispatch(carrierId);
+    const result: SpsDispatchResult = await this.spsDispatcherService.dispatch(carrierId);
     return result;
   }
 
   @Get('dispatcher/queue')
-  getDispatcherQueue() { return this.dispatcherService.getDispatchQueue(); }
+  getDispatcherQueue() { return this.spsDispatcherService.getDispatchQueue(); }
 }

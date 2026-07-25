@@ -32,14 +32,16 @@ export class DashboardService {
         FROM data_points dp ${where}
       `, params);
 
-      const availability = parseFloat(availQry[0]?.online_minutes || '0');
+      const availabilityMinutes = parseFloat(availQry[0]?.online_minutes || '0');
       const performance = perfQry[0]?.avg_val != null ? Math.min(parseFloat(perfQry[0].avg_val), 100) : 95;
       const quality = parseFloat(qualQry[0]?.rate || '0');
 
-      const overall = (availability / 1440 * performance / 100 * quality / 100) * 100;
+      // OEE = Availability% × Performance% × Quality%
+      // availabilityMinutes is raw online minutes from data_points; cap at 100 for display
+      const overall = (Math.min(availabilityMinutes, 1440) / 1440 * performance / 100 * quality / 100) * 100;
 
       return {
-        availability: Math.min(availability, 100),
+        availability: Math.min(availabilityMinutes, 100),
         performance: Math.min(performance, 100),
         quality: Math.min(quality, 100),
         overall: isNaN(overall) ? 0 : parseFloat(overall.toFixed(1)),

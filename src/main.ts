@@ -71,7 +71,6 @@ async function bootstrap() {
   // CORS first — must be before helmet so OPTIONS preflight responses include proper headers
   app.enableCors({ origin: '*', credentials: true });
   app.use(helmet());
-  app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
   
   // Add correlation ID middleware for request tracing
@@ -140,7 +139,11 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  const httpServer = await app.listen(port);
+  
+  // Register raw WebSocket server after HTTP (no Socket.IO, plain ws for frontend compatibility)
+  const { EventGateway } = await import('./events/edge-gateway.service');
+  EventGateway.listen(httpServer);
   
   console.log(`\nMES Edge Gateway running on http://localhost:${port}\nFrontend:     http://localhost:${port}\nAPI (REST):   http://localhost:${port}/api/...\nSwagger:      http://localhost:${port}/api/docs\n`);
 }

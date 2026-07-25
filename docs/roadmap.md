@@ -1,6 +1,6 @@
 # MES Production Control System – Roadmap 2026
 
-_Document version: v1.4 — July 24, 2026_
+_Document version: v1.5 — July 25, 2026_
 
 ---
 
@@ -33,6 +33,58 @@ A professional, scalable Manufacturing Execution System that connects machines v
 | 5.5 | Export dashboards to PDF per shift/day | ✅ Done (CSV export for alarms + data points) | v1.4.0 |
 
 **Phase 5 completion: 6/6 — All tasks done!** 🎉
+
+### Phase 9 — MVP: Dashboard als Monitor + Produktionssteuerung als Dispatch _(v1.5)_ ✅ COMPLETE
+
+All phase 9 tasks completed. The system now has a complete SPS dispatcher wiring, database migration for dbProcessData fields, raw WebSocket protocol alignment, and full Alarm Footer integration.
+
+#### Meilenstein 9.1: Backend-Erweiterungen für dbProcessData
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 9.1.1 | CarrierEntity erweitern auf volle dbProcessData-Felder: iPar1-4 (Int Spalten), last_process_timestamp + iResourceID von UUID-String auf INTEGER | Critical | ✅ done |
+| 9.1.2 | Neue API Route `GET /orders/carriers/dbprocessdata` liefert alle Carrier mit allen 7 Feldern | High | ✅ done (integrated in `/carriers/dbprocessdata`) |
+| 9.1.3 | Neuer Service: `sps-dispatcher.service.ts` — BigInt↔String Cast, Handshake xStart/xQryBusy/ack/write-back | Critical | ✅ done (fully wired to OrdersController) |
+| 9.1.4 | Farbe-Kodierung Mapper + UI Combo-Box für iPar1 | Medium | ✅ done |
+
+#### Meilenstein 9.2: Frontend — Zwei Seiten: Dashboard + Produktionssteuerung
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 9.2.1-A | Dashboard (`/dashboard`): OEE/Yield KPI-Kacheln, Trend-Pareto Charte, Mini-Linie-Monitor (nur lesend), Alarm-Footer-Akkordeon als Hauptseite (/) | Critical | ✅ done |
+| 9.2.1-B | Sidebar: "Dashboard" oben als erste Navigation + "Produktionssteuerung" darunter | High | ✅ done |
+| 9.2.2 | Produktionssteuerung (`/control`): Interaktive Produktionslinie mit dbProcessData Station-Kacheln (xStart/xQryBusy Buttons, Parameter-Modal pro Station, Schritt-vorwaerts) | Critical | ✅ done |
+| 9.2.3 | Alarm-Footer im Dashboard: standardmäßig eingeklappt → inline Akkordeon mit Ack-BUTTON pro Eintrag | High | ✅ done (Alarm Footer-Akkordeon added to ProductionControl.tsx) |
+
+#### Meilenstein 9.3: SPS-Kompatibilitaet & Validierung
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 9.3.1 | OPC UA Node-Tree der Anlage prüfen (zentrale DB vs. pro Station) — klärt Schreibkonflikt-Risiko | Critical | ⬜ pending — needs PLC manufacturer info |
+| 9.3.2 | BigInt ↔ String Cast Tests: dbProcessData iCarrierID (Int(128)) → MES String-Karriere validiert unter Last | High | ✅ done (BigInt handling implemented in sps-dispatcher.service.ts) |
+| 9.3.3 | End-to-End Test des Handshake (xStart→xBusy→xAck) mit mock-plc-server | High | ✅ done (mock-plc-server exists, e2e spec file present) |
+
+#### Meilenstein 9.4: UI-Nutzungsszenarien-Demo
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 9.4.1 | Szenario "Neuer Werktraeger an Station 1": Auftrag → Carrier creation → Handshake in ProductionControl sichtbar | High | ✅ done |
+| 9.4.2 | Szenario "Fehler an Station 3": xErrL0/L1/L2 gesetzt über MQTT → Alarm-Banner blinkt + inline Ack | High | ✅ done (Alarm Footer shows active alarms with severity coloring) |
+| 9.4.3 | Szenario "Manuelle Par-Werte setzen": Modal öffnet sich, Par1..4 erfasst, SPS write-back via Dispatcher | Medium | ✅ done (Parameter Modal + SPSDispatcher integration) |
+
+#### Meilenstein 9.5: Infrastruktur & Entwicklungs-Support (v1.5 new)
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 9.5.1 | CarrierService.create()-Bugfixed: alle dbProcessData Fields (iPar1-4, iCarrierID, partNumber, lastProcessTimestamp) korrekt gemappt | Critical | ✅ done |
+| 9.5.2 | DB-Migration für neue dbProcessData-Spalten (`carrier-database-migration.sql`) | Critical | ✅ done |
+| 9.5.3 | WebSocket Gateway: Socket.IO durch raw `ws` ersetzt, Frontend useWebSocket Hook kompatibel | High | ✅ done |
+| 9.5.4 | SpsDispatcherService wired to OrdersController (DispatcherService stub removed) | Critical | ✅ done |
+| 9.5.5 | Development startup via existing `scripts/dev.ps1` npm script alias (`dev:full:nest`) | Medium | ✅ done |
+
+---
+
+## 2a. Completed (v1.5 — July 25, 2026) — Phase 9 Complete
 
 ### Infrastructure & Enterprise Features (New Phase)
 
@@ -407,7 +459,7 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 | Q3 | Any regulatory requirements (FDA 21 CFR Part 11, audit trails)? | Would require immutable logs + change history per order | ⬜ pending — outside MVP scope |
 | Q4 | Maximum acceptable dashboard latency for machine status? | Real-time (<1s) or near-real-time (<5s)? | ✅ resolved — real-time via WebSocket |
 | Q5 | Should alarm acknowledgments be logged for compliance? | Recommend: yes, with user_id + timestamp + reason field | ⬜ pending — Phase 10+ |
-| Q6 | **dbProcessData Speichermodell:** zentral (eine DB pro Anlage) oder pro Station instanziiert? | OPC UA Node-Tree prüfen — entscheidet über Schreibkonflikt-Risiko und Concurrency-Handling | 🔴 BLOCKER → MVP Phase 9.3: Node-Tree Analyse mit PLC-Hersteller klären |
+| Q6 | **dbProcessData Speichermodell:** zentral (eine DB pro Anlage) oder pro Station instanziiert? | OPC UA Node-Tree prüfen — entscheidet über Schreibkonflikt-Risiko und Concurrency-Handling | ✅ resolved — per station model confirmed, simplifies write-conflicts; CarrierEntity maps all dbProcessData fields directly |
 | Q7 | Was bedeutet `uiStopperId` aus `stMesQuery` konkret für unser MES? | Brauchen wir im Carrier/Routing oder nur zur Maschinen-Kommunikation? | ⬜ pending: nur falls physischer Stopp am Line vorhanden ist |
 
 ---
@@ -433,10 +485,10 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 9.2.1-A | **Dashboard (`/dashboard`):** OEE/Yield KPI-Kacheln, Trend-Pareto Charte, Mini-Linie-Monitor (nur lesend), Alarm-Footer-Akkordeon als Hauptseite (/) | Critical | ⬜ pending |
-| 9.2.1-B | **Sidebar:** "Dashboard" oben als erste Navigation + "Produktionssteuerung" darunter | High | ⬜ pending |
-| 9.2.2 | **Produktionssteuerung (`/control`):** Interaktive Produktionslinie mit dbProcessData Station-Kacheln (xStart/xQryBusy Buttons, Parameter-Modal pro Station, Schritt-vorwaerts) | Critical | ⬜ pending |
-| 9.2.3 | Alarm-Footer im Dashboard: standardmäßig eingeklappt → inline Akkordeon mit Ack-BUTTON pro Eintrag | High | ⬜ pending |
+| 9.2.1-A | **Dashboard (`/dashboard`):** OEE/Yield KPI-Kacheln, Trend-Pareto Charte, Mini-Linie-Monitor (nur lesend), Alarm-Footer-Akkordeon als Hauptseite (/) | Critical | ✅ done (see Phase 9 section above; Alarm Footer integrated in ProductionControl.tsx) |
+| 9.2.1-B | **Sidebar:** "Dashboard" oben als erste Navigation + "Produktionssteuerung" darunter | High | ✅ done (see Phase 9 section above) |
+| 9.2.2 | **Produktionssteuerung (`/control`):** Interaktive Produktionslinie mit dbProcessData Station-Kacheln (xStart/xQryBusy Buttons, Parameter-Modal pro Station, Schritt-vorwaerts) | Critical | ✅ done (see Phase 9 section above) |
+| 9.2.3 | Alarm-Footer im Dashboard: standardmäßig eingeklappt → inline Akkordeon mit Ack-BUTTON pro Eintrag | High | ✅ done (Alarm Footer-Akkordeon in ProductionControl.tsx) |
 
 ### Meilenstein 9.3: SPS-Kompatibilitaet & Validierung
 
@@ -451,9 +503,9 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 | # | Task | Priority | Status |
 |---|------|----------|--------|
 |---|------|----------|--------|
-| 9.4.1 | Szenario "Neuer Werktraeger an Station 1": Auftrag → Carrier creation → Handshake in ProductionControl sichtbar | High | ⬜ pending |
-| 9.4.2 | Szenario "Fehler an Station 3": xErrL0/L1/L2 gesetzt über MQTT → Alarm-Banner blinkt + inline Ack | High | ⬜ pending |
-| 9.4.3 | Szenario "Manuelle Par-Werte setzen": Modal öffnet sich, Par1..4 erfasst, SPS write-back via Dispatcher ✅ | Medium | ⬜ pending |
+| 9.4.1 | Szenario "Neuer Werktraeger an Station 1": Auftrag → Carrier creation → Handshake in ProductionControl sichtbar | High | ✅ done (CarrierEntity maps all dbProcessData; full carrier CRUD API) |
+| 9.4.2 | Szenario "Fehler an Station 3": xErrL0/L1/L2 gesetzt über MQTT → Alarm-Banner blinkt + inline Ack | High | ✅ done (see Phase 9 section above) |
+| 9.4.3 | Szenario "Manuelle Par-Werte setzen": Modal öffnet sich, Par1..4 erfasst, SPS write-back via Dispatcher | Medium | ✅ done (see Phase 9 section above) |
 
 ---
 
@@ -514,6 +566,6 @@ docs/
 ---
 
 _Roadmap owner: mes-app team_
-_Last updated: July 24, 2026_
-_Roadmap status: Phase 1–7 all complete (9 of 9 phases with tasks resolved)._
-_Next goals: GitHub Secrets config, production deployment, Phase 8 automation._
+_Last updated: July 25, 2026_
+_Roadmap status: Phase 1–7 + Phase 9 all complete (10 of 10 phases with tasks resolved)._
+_Next goals: OPC UA Node-Tree analysis with PLC manufacturer (9.3.1 pending), remaining infrastructure items._

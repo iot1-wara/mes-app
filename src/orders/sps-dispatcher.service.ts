@@ -263,12 +263,14 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
       if (this.opcuaService.isConnected && this.opcuaService.isConnected()) {
         const opcUaNode = `ns=1;s=stMES/${resourceTag}:${fieldName}`;
         return true;
+      } else {
+        this.logger.debug(`OPC UA not connected for ${fieldName}, falling back to MQTT`);
       }
-    } catch {
-      this.logger.warn(`OPC UA write to ${fieldName} failed`);
+    } catch (opcErr) {
+      this.logger.warn(`OPC UA write to ${fieldName} failed: ${(opcErr as Error).message}`);
     }
 
-    // Fallback: MQTT publish (for production deployment)
+    // Fallback: MQTT publish (for production deployment per station)
     try {
       await this.mqttService.publish(
         `mes/production/${resourceTag}/dbprocessdata`,
@@ -281,8 +283,8 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
         return false;
       }
       return true;
-    } catch (e) {
-      this.logger.error(`MQTT write to ${fieldName} failed: ${(e as Error).message}`);
+    } catch (mqttErr) {
+      this.logger.error(`MQTT write to ${fieldName} failed: ${(mqttErr as Error).message}`);
       return false;
     }
   }

@@ -3,6 +3,14 @@ import { api } from "../api/client";
 import { getStatusBadge, getMachineStatusGradientClass,
   getCarrierStatusStyles, getCarrierStatusBarClass } from "../utils/helpers";
 
+interface AlarmRecord {
+  id: string;
+  severity: string;
+  machine_id: string;
+  message: string;
+  acknowledged: boolean;
+}
+
 interface DpRecord {
   carrierId: string;
   name: string;
@@ -239,6 +247,8 @@ export default function ProductionControlPage() {
   const [advanceLoading, setAdvanceLoading] = useState<Record<string, boolean>>({});
   const [dispatching, setDispatching] = useState<Record<string, boolean>>({});
   const [handshakeStatuses, setHandshakeStatuses] = useState<Record<string, Record<string, any>>>({});
+  const [alarmsList, setAlarmsList] = useState<AlarmRecord[]>([]);
+  const [alarmExpanded, setAlarmExpanded] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -275,6 +285,10 @@ export default function ProductionControlPage() {
             }
             setHandshakeStatuses(map);
           }
+        })(),
+        (async () => {
+          const alarmData = await api.get('/alarms/active').catch(() => []);
+          if (Array.isArray(alarmData)) setAlarmsList(alarmData as AlarmRecord[]);
         })(),
       ]);
     } finally {
@@ -320,6 +334,16 @@ export default function ProductionControlPage() {
       setDispatching(prev => ({...prev, [carrierId]: false}));
     }
   }, [loadData]);
+
+  const ackAlarm = useCallback(async (id: string) => {
+    try {
+      await api.post(`/alarms/${id}/acknowledge`, {});
+      setAlarmsList(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
+      setActiveAlarmsCount(prev => Math.max(0, prev - 1));
+    } catch {}
+  }, []);
+
+  const unackAlarms = alarmsList.filter(a => !a.acknowledged);
 
   const stationsWithDpdata = machines.map(machine => ({
     machine,
@@ -385,6 +409,48 @@ export default function ProductionControlPage() {
       {editingParam && (
         <ParamModal dp={editingParam} onClose={() => setEditingParam(null)} onSave={saveParameters} />
       )}
+
+      {/* Alarm Footer (Akkordeon — standardmaessig eingeklappt) */}
+      <section className="bg-neutral-900 text-white px-6 py-4 rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
+        <button
+          onClick={() => setAlarmExpanded(!alarmExpanded)}
+          className="flex items-center gap-2 bg-brand-primary/80 text-white px-6 py-3 rounded-lg hover:bg-brand-primary transition-colors"
+        >
+          {"\u{1F514}"} ({unackAlarms.length}) {alarmExpanded ? "Alarme ausblenden" : "Alarm anzeigen"}
+          <span className={`transition-transform ml-auto text-xl ${alarmExpanded ? 'rotate-180' : ''}`}>{"\u2B9F"}</span>
+        </button>
+
+        {alarmExpanded && (
+          <div className="mt-4 space-y-2 max-h-[30vh] overflow-y-auto pr-2">
+            {unackAlarms.length > 0 ? unackAlarms.map(alarm => {
+              const severityColors: Record<string, string> = {
+                info: 'bg-lilac/10 text-lilac border-lilac/20',
+                warning: 'bg-warning/10 text-warning border-warning/30',
+                error: 'bg-error/10 text-error border-error/30',
+                critical: 'bg-red-900/80 text-white border-red-700',
+              };
+              const colors = severityColors[alarm.severity] || severityColors.info;
+              return (
+                <div key={alarm.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${colors} hover:bg-black/5 transition-colors`}>
+                  <button
+                    onClick={() => ackAlarm(alarm.id)}
+                    className="bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/30 transition-colors"
+                  >
+                    Ack
+                  </button>
+                  <span className="font-mono text-[11px] opacity-70">{alarm.machine_id.substring(0, 8)}</span>
+                  <span className={`text-xs font-medium capitalize ${alarm.severity === 'error' ? 'text-error' : ''}`}>
+                    {alarm.severity}
+                  </span>
+                  <span className="text-sm truncate flex-1">{alarm.message}</span>
+                </div>
+              );
+            }) : (
+              <p className="text-center text-neutral-light">Keine Alarme</p>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -32,6 +32,20 @@ export class CarrierService {
     const carrier = new CarrierEntity();
     carrier.name = dto.name.trim();
     carrier.status = (dto.status ?? 'idle') as any;
+    carrier.iStepNo = dto.iStepNo ?? 0;
+    carrier.nextStepNo = dto.nextStepNo != null ? Number(dto.nextStepNo) : 0;
+    if (dto.order_id != null) carrier.order_id = String(dto.order_id);
+    if (dto.current_station_id != null) carrier.current_station_id = String(dto.current_station_id);
+    if (dto.next_resource_id != null) {
+      carrier.iResourceID = Number(dto.next_resource_id);
+    }
+    carrier.iCarrierID = dto.iCarrierID != null ? Number(dto.iCarrierID) : null;
+    carrier.iPar1 = dto.iPar1 != null ? Number(dto.iPar1) : 0;
+    carrier.iPar2 = dto.iPar2 != null ? Number(dto.iPar2) : 0;
+    carrier.iPar3 = dto.iPar3 != null ? Number(dto.iPar3) : 0;
+    carrier.iPar4 = dto.iPar4 != null ? Number(dto.iPar4) : 0;
+    if (dto.partNumber != null) carrier.partNumber = String(dto.partNumber);
+    if (dto.lastProcessTimestamp != null) carrier.lastProcessTimestamp = new Date(dto.lastProcessTimestamp as unknown as string);
     return await this.carriersRepo.save(carrier);
   }
 
