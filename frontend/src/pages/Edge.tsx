@@ -281,22 +281,49 @@ export default function EdgePage() {
         {/* Header */}
         <div className="bg-page-grey rounded-xl shadow-card border border-neutral-border p-5">
           <h1 className="text-[var(--text-3xl-size)] leading-tight font-bold text-neutral-black">Edge Gateway</h1>
-          <p className="text-sm text-neutral-mid mt-1">OPC UA Connections monitor + Config</p>
+          <p className="text-sm text-neutral-mid mt-1">OPC UA + MQTT Connections - Monitor & Configuration</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-neutral-border pt-4">
-          {(["monitor", "config", "mqtt-monitor", "mqtt-config"] as const).map(t => (
-            <button
-              key={t}
-              className={`px-4 py-2 font-medium rounded-t-lg transition-colors text-sm ${
-                tab === t ? "bg-brand-primary text-white" : "text-neutral-mid hover:bg-page-grey"
-              }`}
-              onClick={() => setTab(t)}
-            >
-              {t === "monitor" ? "Monitor" : t === "config" ? "Config (Admin)" : t === "mqtt-monitor" ? "MQTT Monitor" : "MQTT Config (Admin)"}
-            </button>
-          ))}
+        <div className="pt-4">
+          <div className="flex gap-1 border-b border-neutral-border">
+            <div className="flex gap-1 pr-6 pb-0 border-r border-neutral-border mr-2">
+              <button
+                onClick={() => setTab("monitor")}
+                className={`px-4 py-2.5 font-medium rounded-t-lg transition-colors text-sm ${
+                  tab === "monitor" ? "bg-brand-primary text-white" : "text-neutral-mid hover:bg-page-grey hover:text-neutral-dark"
+                }`}
+              >
+                OPC UA Monitor
+              </button>
+              <button
+                onClick={() => setTab("config")}
+                className={`px-4 py-2.5 font-medium rounded-t-lg transition-colors text-sm ${
+                  tab === "config" ? "bg-brand-primary text-white" : "text-neutral-mid hover:bg-page-grey hover:text-neutral-dark"
+                }`}
+              >
+                OPC UA Config
+              </button>
+            </div>
+            <div className="flex gap-1 pb-0">
+              <button
+                onClick={() => setTab("mqtt-monitor")}
+                className={`px-4 py-2.5 font-medium rounded-t-lg transition-colors text-sm ${
+                  tab === "mqtt-monitor" ? "bg-brand-primary text-white" : "text-neutral-mid hover:bg-page-grey hover:text-neutral-dark"
+                }`}
+              >
+                MQTT Monitor
+              </button>
+              <button
+                onClick={() => setTab("mqtt-config")}
+                className={`px-4 py-2.5 font-medium rounded-t-lg transition-colors text-sm ${
+                  tab === "mqtt-config" ? "bg-brand-primary text-white" : "text-neutral-mid hover:bg-page-grey hover:text-neutral-dark"
+                }`}
+              >
+                MQTT Config
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ===== MONITOR TAB ===== */}
@@ -340,7 +367,7 @@ export default function EdgePage() {
               {/* Empty state */}
               {!stations.length && (
                 <div className="sm:col-span-2 lg:col-span-3 rounded-xl border-2 border-dashed border-neutral-border p-8 flex items-center justify-center bg-page-grey">
-                  <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid">Keine Stationen konfiguriert. Wechsle zum Tab "Config".</p>
+                  <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid">Keine Connections konfiguriert. Wechsle zum Tab "Config".</p>
                 </div>
               )}
             </div>
