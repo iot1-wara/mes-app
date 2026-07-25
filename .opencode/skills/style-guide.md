@@ -269,15 +269,27 @@ Das empfohlene Pattern fuer Tabellen mit vielen Actions pro Zeile: ein einzelner
 </div>
 ```
 
-#### Table Action Rules
+#### Actions-Dropdown Toggle Regeln
 
 | Regel | Wert |
 |-------|------|
-| TD padding right-aligned | `px-6 py-4 text-right` |
-| Span wrapper | `display:inline-flex;gap:12px;justify-content:flex-end` (= Tailwind `inline-flex items-center gap-3 justify-end`) |
-| Dropdown Toggle | Textlabel "Aktionen", Panel = `bg-white border border-neutral-border rounded-lg shadow-card z-20` |
-| Keine Icons im Dropdown | Alle Labels als Text, keine Unicode-Symbole |
-| Keine inline-Styles | Alle Farben via Token-Klassen |
+| Toggle Text | `text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs uppercase tracking-wide hover:bg-neutral-stroke` |
+| **Keine Border am Toggle** | Niemals `border border-neutral-border` oder `hover:border-*` am Aktionen-Toggle — das ist ein Textlink, kein Button |
+| Dropdown Panel | `bg-white border border-neutral-border rounded-lg shadow-card z-20 py-1` |
+| Dropdown Width | `w-56` (kompakt) oder `w-64` bei vielen/schmalen Labels |
+| Dropdown Margin | `mt-1` |
+| Panel Items Hover | `hover:bg-neutral-stroke transition-colors` |
+| Danger Item | `text-status-error hover:bg-status-bg-error` |
+
+```tsx
+// ✅ Richtig – Toggle als reiner Textlink, KEINE Border
+<button onClick={() => setOpen(!open)} className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs uppercase tracking-wide hover:bg-neutral-stroke">
+  Aktionen
+</button>
+
+// ❌ Falsch – Border am Toggle (verleitet zum Button, widerspricht Style Guide)
+<button className="text-neutral-mid hover:text-brand-primary border border-neutral-border hover:border-brand-primary px-3 py-1.5 rounded-md">Aktionen</button>
+```
 
 ```tsx
 // ❌ Falsch – alle Actions als gleiche Buttons nebeneinander (zu viel Breite)

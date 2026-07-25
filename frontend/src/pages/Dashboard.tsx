@@ -417,47 +417,31 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Alarm-Footer (Akkordeon — standardmaessig eingeklappt) */}
-        <section className="bg-neutral-900 text-white p-6 rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
-          <button 
-            onClick={() => setAlarmExpanded(!alarmExpanded)}
-            className="flex items-center gap-2 bg-brand-primary/80 text-white px-6 py-3 rounded-lg hover:bg-brand-primary transition-colors"
-          >
-            {"\u{1F514}"} ({unackAlarms.length}) {alarmExpanded ? "Alarme ausblenden" : "Alarm anzeigen"}
-            <span className={`transition-transform ml-auto text-xl ${alarmExpanded ? 'rotate-180' : ''}`}>{"\u2B9F"}</span>
-          </button>
-
-          {alarmExpanded && (
-            <div className="mt-4 space-y-2 max-h-[40vh] overflow-y-auto pr-2">
-              {unackAlarms.length > 0 ? unackAlarms.map(alarm => {
-                const severityColors = {
-                  info: 'bg-lilac/10 text-lilac border-lilac/20',
-                  warning: 'bg-warning/10 text-warning border-warning/30',
-                  error: 'bg-error/10 text-error border-error/30',
-                  critical: 'bg-red-900/80 text-white border-red-700',
-                };
-                const colors = severityColors[alarm.severity as keyof typeof severityColors] || severityColors.info;
-                return (
-                  <div key={alarm.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${colors} hover:bg-black/5 transition-colors`}>
-                    <button 
-                      onClick={() => ackAlarm(alarm.id)} 
-                      className="bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/30 transition-colors"
-                    >
-                      Ack
-                    </button>
-                    <span className="font-mono text-[11px] opacity-70">{alarm.machine_id.substring(0, 8)}</span>
-                    <span className={`text-xs font-medium capitalize ${alarm.severity === 'error' || alarm.severity === 'critical' ? 'text-error' : ''}`}>
-                      {alarm.severity}
-                    </span>
-                    <span className="text-sm truncate flex-1">{alarm.message}</span>
-                  </div>
-                );
-              }) : (
-                <p className="text-center text-neutral-light">Keine Alarme</p>
-              )}
+        {/* Aktive Alarme */}
+        <div className="mt-6 bg-white rounded-[var(--radius-lg)] shadow-card border border-neutral-border p-6 hover:shadow-hover transition-shadow duration-200">
+          <h3 className="text-[var(--text-xl-size)] leading-[var(--text-xl-line)] font-semibold text-neutral-black mb-4">Aktive Alarme</h3>
+          {unackAlarms.length > 0 ? (
+            <div className="space-y-2">
+              {unackAlarms.map(alarm => (
+                <div key={alarm.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${alarm.severity === 'critical' || alarm.severity === 'error' ? 'bg-status-error-bg text-status-error border-status-error/20' : alarm.severity === 'warning' ? 'bg-status-warning-bg text-status-warning border-status-warning/30' : 'bg-accent-lilac-bg text-brand-lilac border-brand-lilac/20'} hover:bg-black/5 transition-colors`}>
+                  <button onClick={() => ackAlarm(alarm.id)} className={`px-2 py-1 rounded text-xs font-medium ${alarm.severity === 'critical' || alarm.severity === 'error' ? 'bg-status-error text-white hover:bg-[var(--color-status-error-dark)]' : 'bg-neutral-stroke text-neutral-dark hover:bg-neutral-border transition-colors'}`}>
+                    Ack
+                  </button>
+                  <span className="font-mono text-xs opacity-70 text-neutral-mid">{alarm.machine_id.substring(0, 8)}</span>
+                  <span className={`text-xs font-medium uppercase bg-neutral-stroke px-2 py-0.5 rounded-full ${alarm.severity === 'critical' || alarm.severity === 'error' ? 'text-status-error' : alarm.severity === 'warning' ? 'text-status-warning' : 'text-brand-lilac'}`}>
+                    {alarm.severity}
+                  </span>
+                  <span className="text-sm text-neutral-dark flex-1">{alarm.message}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 gap-3">
+              <span className="text-4xl text-neutral-light">{"\uD83D\uDD14"}</span>
+              <p className="text-[var(--text-sm-size)] leading-[var(--text-sm-line)] text-neutral-mid font-medium">Keine aktiven Alarme</p>
             </div>
           )}
-        </section>
+        </div>
 
       </main>
     </div>

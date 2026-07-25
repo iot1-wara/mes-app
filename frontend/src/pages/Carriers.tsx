@@ -121,7 +121,7 @@ export default function CarriersPage() {
                   </td>
                     <td className="px-6 py-4 text-right">
                       <div className="relative inline-flex justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === c.id ? null : c.id); }} className="text-neutral-mid hover:text-brand-primary font-medium px-3 py-1.5 rounded-md transition-colors text-xs uppercase tracking-wide border border-neutral-border hover:border-brand-primary">
+                        <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === c.id ? null : c.id); }} className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs uppercase tracking-wide hover:bg-neutral-stroke">
                           Aktionen
                         </button>
                         {openDropdown === c.id && (
