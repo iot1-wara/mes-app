@@ -17,6 +17,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AuthGuard } from './guards/auth.guard';
+import { CarriersModule } from './carriers/carriers.module';
 
 @Module({
   imports: [
@@ -48,8 +50,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     EventBusModule,
     DashboardModule,
     NotificationsModule,
+    CarriersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AuthGuard],
 })
 export class AppModule {}

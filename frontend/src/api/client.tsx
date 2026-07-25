@@ -43,7 +43,7 @@ export function showToast(message: string, type = "info") {
     el.textContent = message;
     el.dataset.id = String(Date.now());
     toasts.appendChild(el);
-    setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity 0.3s"; setTimeout(() => el.remove(), 300); }, 3500);
+    setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity 0.3s"; setTimeout(() => el.remove(), 300); }, 6000);
   }
 }
 

@@ -1,48 +1,33 @@
-import { 
-  Injectable, CanActivate, ExecutionContext, UnauthorizedException, BadRequestException 
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
-export class GuardWithTokenValidation implements CanActivate {
-  private jwtService?: JwtService;
+export class AuthGuard implements CanActivate {
+  constructor(private readonly jwtService: JwtService) {}
   
-  setJwtService(jwtService: JwtService) {
-    this.jwtService = jwtService;
-  }
-  
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     
-    // Public routes — full skip
-    const publicRoutes = ['/api/auth/login', '/api/auth/register'];
-    if (publicRoutes.includes(request.url) || request.url.startsWith('/api/auth/bootstrap')) return true;
+    // Public routes — no auth required
+    if (request.url.startsWith('/api/auth/login') || 
+        request.url.startsWith('/api/auth/register') || 
+        request.url.startsWith('/api/auth/bootstrap')) return true;
     if (request.method === 'OPTIONS') return true;
     
-    // Auth header check
+    // Check for Bearer token
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      // No token — allow but mark as unauthenticated
-      console.debug('[Auth] No bearer token for:', request.url);
-      return true;  
+      return false;
     }
     
     const token = authHeader.split(' ')[1];
-    
     try {
-      const payload = this.jwtService!.verify(token, {
-        secret: process.env.JWT_SECRET || 'mes-production-jwt-secret-key-2026',
-      });
-      request.user = { 
-        userId: payload.sub, 
-        username: payload.username, 
-        role: payload.role 
-      };
+      const payload = this.jwtService.verify(token);
+      request.user = { userId: payload.sub, username: payload.username, role: payload.role };
+      return true;
     } catch (err) {
-      console.warn('[Auth] Invalid token for:', request.url, '-', (err as Error).message);
-      throw new UnauthorizedException('Invalid or expired token');
+      console.error('[AuthGuard] Token verification failed:', err?.message || String(err));
+      return false;
     }
-    
-    return true;
   }
 }

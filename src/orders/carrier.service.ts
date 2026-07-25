@@ -5,7 +5,6 @@ import type { FindOptionsRelations, FindOptionsSelect } from 'typeorm';
 import { CarrierEntity } from './carrier.entity';
 import type { CreateCarrierDto, UpdateCarrierDto, AdvanceCarrierDto } from './carrier.dto';
 
-// Farb-Namen Mapper für iPar1 (Deckelfarbe) aus dbProcessData DB151
 export const DECKEL_FARBE_NAME: Record<number, string> = {
   0: 'keine',
   1: 'rot',
@@ -21,26 +20,23 @@ export class CarrierService {
   ) {}
 
   async create(dto: CreateCarrierDto): Promise<CarrierEntity> {
+    if (!dto.name || !dto.name.trim()) {
+      throw new BadRequestException('name is required and must not be empty');
+    }
+    
+    const existing = await this.carriersRepo.findOne({ where: { name: dto.name.trim() } });
+    if (existing) {
+      throw new BadRequestException(`Carrier with name "${dto.name.trim()}" already exists`);
+    }
+    
     const carrier = new CarrierEntity();
-    carrier.name = dto.name;
+    carrier.name = dto.name.trim();
     carrier.status = (dto.status ?? 'idle') as any;
-    console.log('BEFORE SAVE:', JSON.stringify({name: carrier.name, status: carrier.status}));
     return await this.carriersRepo.save(carrier);
   }
 
   async findAll(): Promise<CarrierEntity[]> {
-    try {
-      const rows = await this.carriersRepo.query(
-        `SELECT id, name, i_step_no, next_step_no, current_station_id, next_resource_id, handshake_flags, process_data, total_material_used_qty, status, created_at, updated_at FROM carriers ORDER BY created_at DESC`
-      );
-      return rows.map((r: any) => {
-        const c = new CarrierEntity();
-        Object.keys(r).forEach(k => { c[k] = r[k]; });
-        return c;
-      });
-    } catch {
-      return [];
-    }
+    return await this.carriersRepo.find({ order: { created_at: 'DESC' } });
   }
 
   async findOne(id: string): Promise<CarrierEntity> {
@@ -61,15 +57,12 @@ export class CarrierService {
       carrier.handshake_flags = { ...carrier.handshake_flags, xErrL0: true } as typeof carrier.handshake_flags;
     }
 
-    // Map all dbProcessData fields to entity columns
     Object.assign(carrier, dto);
     return this.carriersRepo.save(carrier);
   }
 
   async advance(id: string, dto: AdvanceCarrierDto): Promise<CarrierEntity> {
     const carrier = await this.findOne(id);
-    
-    // Trigger OPC UA handshake
     carrier.handshake_flags = { xStart: true, xQryBusy: false };
     carrier.iStepNo = dto.iStepNo;
     carrier.process_data = {
@@ -123,8 +116,6 @@ export class CarrierService {
     }));
   }
 
-  // === NEW: dbProcessData endpoint (Phase 9 MVP) ===
-
   async getDbProcessData(): Promise<Array<{
     carrierId: string;
     name: string;
@@ -133,9 +124,9 @@ export class CarrierService {
     iResourceID: number | null;
     next_resource_id: number | null;
     deckelfarbeName: string;
-    iPar2: number;  // rote Kugeln
-    iPar3: number;  // grune Kugeln
-    iPar4: number;  // blaue Kugeln
+    iPar2: number;
+    iPar3: number;
+    iPar4: number;
     lastProcessTimestamp: Date | null;
     partNumber?: string;
     status: string;
@@ -202,12 +193,9 @@ export class CarrierService {
 
   async advanceManual(id: string, dto: Omit<AdvanceCarrierDto, 'iStepNo'>): Promise<CarrierEntity> {
     const carrier = await this.findOne(id);
-    
-    // Read current step from the carrier's process data (if available) or iStepNo
     const currentStep = (carrier.process_data?.iStepNo ?? carrier.iStepNo) || 0;
     const nextStep = currentStep + 1;
 
-    // Trigger OPC UA handshake
     carrier.handshake_flags = { xStart: true, xQryBusy: false };
     carrier.iStepNo = nextStep;
     carrier.process_data = {

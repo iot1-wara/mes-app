@@ -47,7 +47,7 @@ export default function OrdersPage() {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
     
-    await api.post("/orders/carriers", {
+    await api.post("/carriers", {
       order_id: orderId,
       name: `WERKST-${orderId.substring(0,6)}`,
       current_station_id: order.machine_id || "",

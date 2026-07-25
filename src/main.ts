@@ -1,50 +1,14 @@
-import { NestFactory, ModuleRef } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as path from 'path';
 import * as express from 'express';
-import { ValidationPipe, UnauthorizedException, CanActivate, ExecutionContext, ExceptionFilter, ArgumentsHost } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { ValidationPipe, ExceptionFilter, ArgumentsHost } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
 import helmet from 'helmet';
 import * as winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-
-class AllAuthGuard implements CanActivate {
-  private jwtService?: JwtService;
-  
-  setJwtService(jwtService: JwtService) { this.jwtService = jwtService; }
-  
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    
-    if (request.url.startsWith('/api/auth/login') || 
-        request.url.startsWith('/api/auth/register') || 
-        request.url.startsWith('/api/auth/bootstrap')) return true;
-    if (request.method === 'OPTIONS') return true;
-    
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing authentication token');
-    }
-    
-    const token = authHeader.split(' ')[1];
-    try {
-      const payload = this.jwtService!.verify(token, {
-        secret: process.env.JWT_SECRET || 'mes-production-jwt-secret-key-2026',
-      });
-      request.user = { 
-        userId: payload.sub, 
-        username: payload.username, 
-        role: payload.role 
-      };
-    } catch (err) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-    
-    return true;
-  }
-}
+import { AuthGuard } from './guards/auth.guard';
 
 function createLogger(): winston.Logger {
   const transports: winston.transport[] = [
@@ -89,7 +53,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
-  
+
   // swagger configuration
   const config = new DocumentBuilder()
     .setTitle('MES Production Control System')
@@ -104,9 +68,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // CORS first — must be before helmet so OPTIONS preflight responses include proper headers
+  app.enableCors({ origin: '*', credentials: true });
   app.use(helmet());
   app.useWebSocketAdapter(new WsAdapter(app));
-  app.enableCors({ origin: '*', credentials: true });
   app.setGlobalPrefix('api');
   
   // Add correlation ID middleware for request tracing
@@ -131,31 +96,9 @@ async function bootstrap() {
     skipMissingProperties: false,
   }));
 
-  const jwtService = new JwtService({
-    secret: process.env.JWT_SECRET || 'mes-production-jwt-secret-key-2026',
-    signOptions: { expiresIn: Number(process.env.JWT_EXPIRES_IN) || 86400 },
-  });
-  
-  app.useGlobalGuards(new (class implements CanActivate {
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-      const request = context.switchToHttp().getRequest();
-      const publicPrefixes = ['/api/auth/login', '/api/auth/register', '/api/auth/bootstrap'];
-      if (publicPrefixes.some(p => request.url.startsWith(p))) return true;
-      if (request.method === 'OPTIONS') return true;
-      const authHeader = request.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) return true;
-      const token = authHeader.split(' ')[1];
-      try {
-        const payload = jwtService.verify(token);
-        request.user = { userId: payload.sub, username: payload.username, role: payload.role };
-      } catch {
-        // silently allow unauthenticated requests for dev mode
-        return false;
-      }
-      return true;
-    }
-  })());
-  
+  // Register the globally injected AuthGuard — it gets JwtService from auth.module (single source of truth)
+  app.useGlobalGuards(app.get(AuthGuard));
+
   try {
     const dbUrl = `postgresql://${process.env.DB_USERNAME || 'mes_admin'}:${process.env.DB_PASSWORD}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_DATABASE || 'mes_production'}`;
     console.log('[TimescaleDB] Migration skipped (requires TypeORM connection)');
@@ -174,6 +117,7 @@ async function bootstrap() {
     }
     next();
   });
+
 
   app.useGlobalFilters({
     catch(error: any) { 

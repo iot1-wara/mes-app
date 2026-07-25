@@ -259,7 +259,7 @@ export default function ProductionControlPage() {
           setActiveAlarmsCount(count);
         })(),
         (async () => {
-          const dpData = await api.get('/orders/carriers/dbprocessdata').catch(() => []);
+          const dpData = await api.get('/carriers/dbprocessdata').catch(() => []);
           if (Array.isArray(dpData)) setDbProcessData(dpData as DpRecord[]);
         })(),
         (async () => {
@@ -267,7 +267,7 @@ export default function ProductionControlPage() {
           if (Array.isArray(machineData)) setMachines(machineData as MachineItem[]);
         })(),
         (async () => {
-          const hsData = await api.get('/orders/carriers/handshake-statuses').catch(() => []);
+          const hsData = await api.get('/carriers/handshake-statuses').catch(() => []);
           if (Array.isArray(hsData)) {
             const map: Record<string, Record<string, any>> = {};
             for (const item of hsData as Array<{ id: string; handshake: Record<string, any> }>) {
@@ -284,7 +284,7 @@ export default function ProductionControlPage() {
 
   const saveParameters = useCallback(async (carrierId: string, parData: { iPar1: number; iPar2: number; iPar3: number; iPar4: number }) => {
     try {
-      await api.patch(`/orders/carriers/${carrierId}`, {
+      await api.patch(`/carriers/${carrierId}`, {
         iPar1: parData.iPar1 || 0,
         iPar2: parData.iPar2 || 0,
         iPar3: parData.iPar3 || 0,
@@ -300,7 +300,7 @@ export default function ProductionControlPage() {
   const advanceCarrier = useCallback(async (carrierId: string) => {
     setAdvanceLoading(prev => ({...prev, [carrierId]: true}));
     try {
-      await api.post(`/orders/carriers/${carrierId}/advance-step`, {});
+      await api.post(`/carriers/${carrierId}/advance-step`, {});
       loadData();
     } catch (err: any) {
       console.error('[ProductionControl] advance failed:', err);

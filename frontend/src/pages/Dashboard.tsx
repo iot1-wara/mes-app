@@ -87,7 +87,7 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     const res = await Promise.allSettled([
       api.get("/machines"),
-      api.get("/orders/carriers/list").catch(() => []),
+       api.get("/carriers/list").catch(() => []),
       api.get("/orders?status=in_progress").catch(() => []),
       api.get("/alarms/stats/active-count").catch(() => 0),
       api.get("/dashboard/oee").catch(() => ({ availability: 0, performance: 0, quality: 0, overall: 0 })),

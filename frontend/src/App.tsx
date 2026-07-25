@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import ProductionControlPage from "./pages/ProductionControl";
@@ -58,7 +58,6 @@ export default function App() {
           <main className="flex-1 flex flex-col gap-6 p-[var(--space-xl)] overflow-y-auto relative">
             {authState && (
               <Routes>
-                <Route path="/auth/*" element={<Navigate to="/" />} />
                 <Route path="/" element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="control" element={<ProductionControlPage />} />

@@ -1,18 +1,28 @@
-import { IsNotEmpty, IsString, IsUUID, IsOptional, IsEnum, IsNumber, IsInt } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsOptional, IsEnum, IsNumber, IsInt, IsBoolean, ValidateIf, IsDefined } from 'class-validator';
 
 export class CreateCarrierDto {
-  @IsNotEmpty()
+  @IsDefined({ message: 'name field is required' })
+  @IsNotEmpty({ message: 'name must not be empty' })
   @IsString()
   name!: string;
+
+  // Field names must match what frontend sends exactly
+  @IsOptional()
+  @IsString()
+  order_id?: string;
+
+  @IsOptional()
+  @IsString()
+  current_station_id?: string;
+
+  @IsOptional()
+  @IsString()
+  next_resource_id?: string;
 
   // next_resource_id as integer (matches SPS int(2))
   @IsOptional()
   @IsInt()
   current_station_id_alt?: number;
-
-  @IsOptional()
-  @IsUUID()
-  order_id?: string;
 
   @IsNumber()
   @IsOptional()
@@ -56,6 +66,19 @@ export class CreateCarrierDto {
   @IsOptional()
   @IsEnum(['idle', 'in_process', 'at_station', 'moved', 'error', 'waiting_for_material'])
   status?: 'idle' | 'in_process' | 'at_station' | 'moved' | 'error' | 'waiting_for_material';
+
+  // Raw passthrough for unknown body fields that may be sent
+  @IsOptional()
+  @IsBoolean()
+  xStart?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  xQryBusy?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  xAck?: boolean;
 }
 
 export class UpdateCarrierDto {

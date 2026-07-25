@@ -66,7 +66,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-[rgba(255,255,255,0.1)]">
-        <button onClick={() => { logoutUser(); window.location.href = "/auth/login"; }} className="w-full py-2 text-sm text-status-error hover:text-status-error-dark font-medium rounded-md hover:bg-status-error-bg transition-colors">Abmelden</button>
+        <button onClick={() => { logoutUser(); window.location.href = "/"; }} className="w-full py-2 text-sm text-status-error hover:text-status-error-dark font-medium rounded-md hover:bg-status-error-bg transition-colors">Abmelden</button>
         <div className="flex items-center gap-2 text-xs text-neutral-light mt-2">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
           Edge aktiv

@@ -12,9 +12,9 @@ import { DispatcherService } from './dispatcher.service';
 import { OrdersController } from './orders.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OrderEntity, CarrierEntity, MaterialEntity, MachineErrorEntity])],
+  imports: [TypeOrmModule.forFeature([CarrierEntity, OrderEntity, MaterialEntity, MachineErrorEntity])],
   controllers: [OrdersController],
   providers: [OrdersService, CarrierService, MaterialsService, MachineErrorsService, DispatcherService],
-  exports: [OrdersService, CarrierService, MaterialsService, MachineErrorsService],
+  exports: [OrdersService, CarrierService, MaterialsService, MachineErrorsService, DispatcherService],
 })
 export class OrdersModule {}

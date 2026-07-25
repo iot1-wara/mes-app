@@ -1,11 +1,9 @@
 ﻿import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import {OrdersService} from './orders.service';
-import { CarrierService } from './carrier.service';
 import { MaterialsService } from './materials.service';
 import { MachineErrorsService } from './machine-errors.service';
 import { DispatcherService } from './dispatcher.service';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
-import type { CreateCarrierDto, UpdateCarrierDto, AdvanceCarrierDto } from './carrier.dto';
 import type { CreateMaterialDto } from './material.entity';
 import { SPSHandshakeResult } from './dispatcher.service';
 
@@ -13,59 +11,12 @@ import { SPSHandshakeResult } from './dispatcher.service';
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
-    private readonly carrierService: CarrierService,
     private readonly materialsService: MaterialsService,
     private readonly machineErrorsService: MachineErrorsService,
     private readonly dispatcherService: DispatcherService,
   ) {}
 
-  // === Spezifische Carriers Routes VOR params (NestJS Route Matching) ===
-
-  @Get('carriers/list') 
-  getAllCarriers() { return this.carrierService.findAll(); }
-
-  @Get('carriers/stats') 
-  getCarrierStats() { return this.carrierService.getStats(); }
-
-  @Get('carriers/station/:stationId')
-  getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
-
-  @Get('carriers/handshake-statuses')
-  getHandshakeStatuses() { return this.carrierService.getHandshakeStatuses(); }
-
-  @Get('carriers/dbprocessdata')
-  getDbProcessData() { return this.carrierService.getDbProcessData(); }
-
-  @Get('carriers/next-resources')
-  getNextResources() { return this.carrierService.getNextResources(); }
-
-  // === Carrier CRUD (params müssen zum Schluss) ===
-
-  @Post('carriers')
-  createCarrier(@Body() dto: CreateCarrierDto) { 
-    return this.carrierService.create(dto); 
-  }
-
-  @Get('carriers/list') 
-  getAllCarriersAlias() { return this.carrierService.findAll(); }
-
-  @Get('carriers/:id')
-  getCarrier(@Param('id') id: string) { return this.carrierService.findOne(id); }
-
-  @Patch('carriers/:id')
-  updateCarrier(@Param('id') id: string, @Body() dto: UpdateCarrierDto) { 
-    return this.carrierService.update(id, dto as UpdateCarrierDto); 
-  }
-
-  @Delete('carriers/:id')
-  deleteCarrier(@Param('id') id: string) { return this.carrierService.remove(id); }
-
-  @Post('carriers/:id/advance-step')
-  advanceStep(@Param('id') id: string, @Body() body: { next_resource_id?: number | null }) { 
-    return this.carrierService.advanceManual(id, body as Omit<AdvanceCarrierDto, 'iStepNo'>); 
-  }
-
-  // === Orders (params am Schluss) ===
+   // === Orders (params am Schluss) ===
 
   @Post()
   createOrder(@Body() dto: CreateOrderDto) { return this.ordersService.create(dto); }

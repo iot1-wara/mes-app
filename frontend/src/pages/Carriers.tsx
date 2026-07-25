@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import StatCard from "../components/StatCard";
-import { api } from "../api/client";
+import { api, showToast } from "../api/client";
 
 export default function CarriersPage() {
   const [carriers, setCarriers] = useState<any[]>([]);
@@ -9,11 +9,12 @@ export default function CarriersPage() {
   const [filter, setFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ id: null, name: "", current_station_id: "", next_resource_id: "", iStepNo: 0, nextStepNo: 1 });
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
-      api.get("/orders/carriers").catch(() => []),
-      api.get("/orders/carriers/stats").catch(() => null),
+       api.get("/carriers").catch(() => []),
+      api.get("/carriers/stats").catch(() => null),
     ]).then(([d, s]) => {
       setCarriers(Array.isArray(d) ? d : []);
       if (s) setStats(s);
@@ -29,33 +30,33 @@ export default function CarriersPage() {
   };
 
   function handleStatusChange(id: string, newStatus: string) {
-    api.patch(`/orders/carriers/${id}`, { status: newStatus }).then(() => {
+    api.patch(`/carriers/${id}`, { status: newStatus }).then(() => {
       setCarriers(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
     }).catch(() => {});
   }
 
   function handleDelete(id: string) {
     if (!confirm("Werkstückträger wirklich löschen?")) return;
-    api.del(`/orders/carriers/${id}`).then(() => {
+    api.del(`/carriers/${id}`).then(() => {
       setCarriers(prev => prev.filter(c => c.id !== id));
     }).catch(() => {});
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const url = form.id ? `/orders/carriers/${form.id}` : "/orders/carriers";
+    const url = form.id ? `/carriers/${form.id}` : "/carriers";
     const method = form.id ? "patch" : "post";
     api[method](url, {
-      name: form.name,
+      name: form.name || 'unnamed',
       current_station_id: form.current_station_id,
       next_resource_id: form.next_resource_id,
       iStepNo: form.iStepNo,
       nextStepNo: form.nextStepNo,
     }).then(() => {
-      api.get("/orders/carriers").then(d => setCarriers(Array.isArray(d) ? d : [])).catch(() => {});
+      api.get("/carriers").then(d => setCarriers(Array.isArray(d) ? d : [])).catch(() => {});
       setShowModal(false);
       setForm({ id: null, name: "", current_station_id: "", next_resource_id: "", iStepNo: 0, nextStepNo: 1 });
-    }).catch(() => {});
+    }).catch((e) => { showToast('Fehler: ' + (e?.message || 'Erstellung fehlgeschlagen'), 'error'); });
   }
 
   function openEdit(c: any) {
@@ -78,7 +79,7 @@ export default function CarriersPage() {
 
         {!loading && (
           <div className="flex gap-3">
-            <button onClick={() => { setShowModal(true); setForm({ id: null, name: "", current_station_id: "", next_resource_id: "", iStepNo: 0, nextStepNo: 1 }); }} className="bg-brand-primary text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--color-brand-primary-dark)] active:bg-[#b96306] transition-colors">
+            <button onClick={() => { console.log('[Carriers] NEW CARRIER clicked'); setShowModal(true); setForm({ id: null, name: "", current_station_id: "", next_resource_id: "", iStepNo: 0, nextStepNo: 1 }); }} className="bg-brand-primary text-white font-medium px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--color-brand-primary-dark)] active:bg-[#b96306] transition-colors">
               + Neuer Werkstückträger
             </button>
           </div>
@@ -118,23 +119,39 @@ export default function CarriersPage() {
                       {c.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="inline-flex items-center gap-3 justify-end">
-                      {c.status !== "completed" && (
-                        <button onClick={() => handleStatusChange(c.id, "completed")} className="text-neutral-mid hover:text-status-success font-medium px-1 py-0.5 rounded-md transition-colors text-xs hover:bg-status-bg-success">
-                          Fertig
+                    <td className="px-6 py-4 text-right">
+                      <div className="relative inline-flex justify-end">
+                        <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === c.id ? null : c.id); }} className="text-neutral-mid hover:text-brand-primary font-medium px-3 py-1.5 rounded-md transition-colors text-xs uppercase tracking-wide border border-neutral-border hover:border-brand-primary">
+                          Aktionen
                         </button>
-                      )}
-                      {c.status !== "completed" && (
-                        <button onClick={() => openEdit(c)} className="text-neutral-mid hover:text-brand-primary font-medium px-1 py-0.5 rounded-md transition-colors text-xs hover:bg-neutral-stroke">
-                          Edit
-                        </button>
-                      )}
-                      <button onClick={() => handleDelete(c.id)} className="text-neutral-mid hover:text-status-error font-medium px-1 py-0.5 rounded-md transition-colors text-xs hover:bg-status-bg-error">
-                          Loeschen
-                      </button>
-                    </div>
-                  </td>
+                        {openDropdown === c.id && (
+                          <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-2 w-64 bg-white border border-neutral-border rounded-lg shadow-card z-20 py-1">
+                            {c.status !== "completed" && (
+                              <button onClick={(e) => { setOpenDropdown(null); handleStatusChange(c.id, "at_station"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                Bei Station setzen
+                              </button>
+                            )}
+                            {c.status !== "completed" && (
+                              <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(c.id, "in_process"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                In Bearbeitung setzen
+                              </button>
+                            )}
+                            {c.status !== "completed" && (
+                              <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); handleStatusChange(c.id, "idle"); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                                Auf Inaktiv setzen
+                              </button>
+                            )}
+                            <div className="my-1 border-t border-neutral-border"></div>
+                            <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); openEdit(c); }} className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-stroke transition-colors">
+                              Bearbeiten
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); if(!confirm("Wirklich löschen?")) return; handleDelete(c.id); setOpenDropdown(null); }} className="w-full text-left px-3 py-2 text-sm text-status-error hover:bg-status-bg-error transition-colors">
+                              Löschen
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                 </tr>
               ))
             ) : (

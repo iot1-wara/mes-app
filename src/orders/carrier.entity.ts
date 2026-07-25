@@ -8,8 +8,8 @@ export class CarrierEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
-  name!: string;  // e.g. "WERKST-001" carrier identifier
+  @Column({ length: 100 })
+  name!: string;  // e.g. "WERKST-001" carrier identifier — no DB default, must be set explicitly by client (DB sync will fail if existing rows have NULL — see migration notes)
 
   @Column({ type: 'int', default: 0 })
   iStepNo!: number;  // Current step number (maps to dbProcessData.iStepNo)
