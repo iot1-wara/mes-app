@@ -15,14 +15,14 @@ export function getStatusBadge(status?: string): string {
     warning: 'bg-status-warning-bg text-status-warning',
     error: 'bg-status-error-bg text-status-error',
     offline: 'bg-neutral-100 text-neutral-400',
-    pending: 'bg-status-info-bg/80 text-status-info',
+    pending: 'bg-status-info-bg text-status-info',
     released: 'bg-status-info-bg text-status-info',
     in_progress: 'bg-status-success-bg text-status-success',
     completed: 'bg-status-success-bg text-status-success',
     cancelled: 'bg-neutral-100 text-neutral-400',
     on_hold: 'bg-status-warning-bg text-status-warning',
     maintenance: 'bg-status-warning-bg text-status-warning',
-    at_station: 'bg-brand-lilac/10 text-brand-lilac',
+    at_station: 'bg-accent-lilac-bg text-brand-lilac',
     in_process: 'bg-brand-primary/10 text-brand-primary',
     moved: 'bg-status-info-bg text-status-info',
     waiting_for_material: 'bg-status-warning-bg text-status-warning',
@@ -60,7 +60,7 @@ export function getPriorityColor(p: string): string {
     medium: 'text-status-warning',
     low: 'text-neutral-mid'
   };
-  return map[p] || 'text-neutral-400';
+  return map[p] || 'text-neutral-500';
 }
 
 export function getCarrierStatusStyles(status?: CarrierStatus): string {
@@ -110,4 +110,4 @@ export function getHandshakeDotClass(condition?: boolean, type: 'success' | 'bra
   return classes[type]?.join(' ') || '';
 }
 
-export { MachineStatus, OrderStatus, CarrierStatus };
+export type { MachineStatus, OrderStatus, CarrierStatus };

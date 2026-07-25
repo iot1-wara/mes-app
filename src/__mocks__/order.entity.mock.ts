@@ -1,0 +1,1 @@
+export class OrderEntity { id!: string; name!: string; priority!: number; machine_id!: string; operation!: string; status!: string; quantity!: number; completed_quantity!: number; next_step_no!: number; created_at!: Date; updated_at!: Date; materials!: any[]; }

@@ -1,4 +1,4 @@
-// Mock node-opcua to avoid ESM hexy dependency issues in Jest e2e tests
+// Mock node-opcua to avoid ESM module issues (hexy dependency) in Jest
 const defaults = { securityModes: ['None', 'Sign', 'SignAndEncrypt'] };
 
 module.exports = {
@@ -10,7 +10,7 @@ module.exports = {
     disconnect = async () => {};
     browse = async () => [];
     readFile = async () => ({});
-    addSubscription = () => ({ on: () => void 0, removeListener: () => void 0, close: async () => {} });
+    addSubscription = () => ({ on: jest.fn(), removeListener: jest.fn(), close: async () => {} });
   },
   nodeset: { filename: '' },
   resolveNodeTypeDescriptor: () => undefined,

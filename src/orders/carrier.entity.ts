@@ -72,8 +72,8 @@ export class CarrierEntity {
   @JoinColumn({ name: 'order_id' })
   order?: any;
 
-  @Column()
-  order_id!: string;
+  @Column({ nullable: true })
+  order_id!: string | null;
 
   @Column({ 
     type: 'enum', 

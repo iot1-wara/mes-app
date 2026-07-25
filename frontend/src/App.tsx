@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
+import ProductionControlPage from "./pages/ProductionControl";
 import MachinesPage from "./pages/Machines";
 import AlarmsPage from "./pages/Alarms";
 import TracesPage from "./pages/Traces";
@@ -54,11 +55,13 @@ export default function App() {
         <ToastContainer />
         <div className="h-screen w-screen flex overflow-hidden bg-neutral-50">
           <Sidebar />
-          <main className="flex-1 flex flex-col gap-6 p-6 overflow-y-auto relative">
+          <main className="flex-1 flex flex-col gap-6 p-[var(--space-xl)] overflow-y-auto relative">
             {authState && (
               <Routes>
                 <Route path="/auth/*" element={<Navigate to="/" />} />
                 <Route path="/" element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="control" element={<ProductionControlPage />} />
                 <Route path="machines/*" element={<MachinesPage />} />
                 <Route path="orders/*" element={<OrdersPage />} />
                 <Route path="carriers/*" element={<CarriersPage />} />
@@ -165,7 +168,7 @@ function showToast(message, type = "info") {
   }
   const colors = { error: "bg-status-error", info: "bg-brand-primary", success: "bg-status-success" };
   const toast = document.createElement("div");
-  toast.className = `${colors[type] || "bg-brand-primary"} text-white px-4 py-3 rounded-lg shadow-lg mb-2 text-sm`;
+  toast.className = `${colors[type] || "bg-brand-primary"} text-white px-4 py-3 rounded-lg shadow-card mb-2 text-sm`;
   toast.textContent = message;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 5000);

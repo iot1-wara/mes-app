@@ -1,6 +1,16 @@
 # Dependencies
 node_modules/
 frontend/node_modules/
+dist/
+dist-new/
+coverage/
+logs/
+backend.log
+*.js.map
+*.d.ts
+src/__mocks__/*.d.ts
+src/__mocks__/*.js.map
+**/*.audit.json
 
 # Build outputs
 dist/

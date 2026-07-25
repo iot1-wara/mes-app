@@ -34,6 +34,13 @@
    --color-brand-primary-dark: #d97706;  /* Orange-Dunkel für hover */
    --color-status-error-dark:  #b91c1c;
    --color-brand-lilac-dark:   #8a63be;  /* Lilac-Dunkel für hover */
+
+  /* Warning/Error text bg aliases — referenced by helpers.tsx */
+   --color-warning-bg:         var(--color-status-warning-bg);
+   --color-error-bg:           var(--color-status-error-bg);
+   --color-lilac:              var(--color-brand-lilac);
+   --color-error:              var(--color-status-error);
+   --color-bg-white:           var(--color-neutral-50);
 }
 
 @utility shadow-card {

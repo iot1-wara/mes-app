@@ -77,9 +77,9 @@ export default function TracesPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Gesamt" value={String(traces.length)} icon="" />
-          <StatCard label="Kategorien" value={String(allCategories.length)} icon="" />
-          <StatCard label="Maschinen" value={String(machines.length)} icon="" />
+          <StatCard label="Gesamt" value={String(traces.length)} />
+          <StatCard label="Kategorien" value={String(allCategories.length)} />
+          <StatCard label="Maschinen" value={String(machines.length)} />
         </div>
 
         <div className="flex gap-1.5 flex-wrap items-center">

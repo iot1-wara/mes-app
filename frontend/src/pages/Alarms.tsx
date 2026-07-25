@@ -101,9 +101,9 @@ export default function AlarmsPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Aktiv" value={String(activeCount)} icon="" />
-          <StatCard label="Acknowledged" value={String(alarms.length - activeCount)} icon="" />
-          <StatCard label="Ausgewahlt ({selected.size})" value={String(selected.size)} icon="" />
+          <StatCard label="Aktiv" value={String(activeCount)} />
+          <StatCard label="Acknowledged" value={String(alarms.length - activeCount)} />
+          <StatCard label="Ausgewahlt ({selected.size})" value={String(selected.size)} />
         </div>
 
         <div className="flex gap-1.5 flex-wrap items-center">

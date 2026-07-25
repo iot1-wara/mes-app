@@ -10,9 +10,9 @@ export class CreateCarrierDto {
   @IsInt()
   current_station_id_alt?: number;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
-  order_id!: string;
+  order_id?: string;
 
   @IsNumber()
   @IsOptional()

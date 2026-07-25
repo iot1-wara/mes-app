@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { MaterialEntity } from './material.entity';
+import { CarrierEntity } from './carrier.entity';
 
 @Entity('orders')
 export class OrderEntity {
@@ -62,6 +63,9 @@ export class OrderEntity {
 
   @OneToMany(() => MaterialEntity, (mat) => mat.order)
   materials?: any[];
+
+  @OneToMany(() => CarrierEntity, (carrier) => carrier.order)
+  carriers?: any[];
 
   @CreateDateColumn()
   created_at!: Date;

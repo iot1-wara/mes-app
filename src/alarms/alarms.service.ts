@@ -31,6 +31,10 @@ export class AlarmsService {
     return this.alarmsRepo.find({ order: { created_at: 'DESC' } });
   }
 
+  async findActive(): Promise<AlarmEntity[]> {
+    return this.alarmsRepo.find({ where: { acknowledged: false }, order: { created_at: 'DESC' } });
+  }
+
   async findOne(id: string): Promise<AlarmEntity> {
     const alarm = await this.alarmsRepo.findOne({ where: { id } });
     if (!alarm) throw new NotFoundException('Alarm not found');

@@ -12,6 +12,28 @@ export class AlarmsController {
   @Get()
   findAll() { return this.alarmsService.findAll(); }
 
+  // === Spezifische Routes VOR :id (NestJS Route Matching) ===
+
+  @Get('active')
+  findActiveAlarms() { return this.alarmsService.findActive(); }
+
+  @Get('stats/active-count')
+  getActiveAlarmCount() { return this.alarmsService.setActiveCount(); }
+
+  @Get('export/csv')
+  exportCsv() { return this.alarmsService.exportCsv(); }
+
+  @Post('bulk-acknowledge')
+  @HttpCode(HttpStatus.OK)
+  bulkAcknowledge(@Body() body: { ids: string[] }) {
+    return this.alarmsService.bulkAcknowledge(body.ids);
+  }
+
+  @Get('dispatch/:id')
+  dispatchAlarm(@Param('id') id: string) { return this.alarmsService.dispatch(id); }
+
+  // === Parameter Routes ===
+
   @Get(':id')
   findOne(@Param('id') id: string) { return this.alarmsService.findOne(id); }
 
@@ -22,26 +44,6 @@ export class AlarmsController {
   @HttpCode(HttpStatus.OK)
   acknowledge(@Param('id') id: string) { return this.alarmsService.acknowledge(id); }
 
-  @Post('bulk-acknowledge')
-  @HttpCode(HttpStatus.OK)
-  bulkAcknowledge(@Body() body: { ids: string[] }) {
-    return this.alarmsService.bulkAcknowledge(body.ids);
-  }
-
-  @Get('export/csv')
-  exportCsv() {
-    return this.alarmsService.exportCsv();
-  }
-
   @Delete(':id')
   remove(@Param('id') id: string) { return this.alarmsService.remove(id); }
-
-  @Get('stats/active-count')
-  getActiveAlarmCount() { return this.alarmsService.setActiveCount(); }
-
-  @Post('dispatch/:id')
-  @HttpCode(HttpStatus.OK)
-  dispatchAlarm(@Param('id') id: string) {
-    return this.alarmsService.dispatch(id);
-  }
 }

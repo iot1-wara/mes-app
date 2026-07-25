@@ -19,12 +19,35 @@ export class OrdersController {
     private readonly dispatcherService: DispatcherService,
   ) {}
 
-  // --- Carrier CRUD (before :id routes to avoid wildcard match) ---
-  @Post('carriers')
-  createCarrier(@Body() dto: CreateCarrierDto) { return this.carrierService.create(dto); }
+  // === Spezifische Carriers Routes VOR params (NestJS Route Matching) ===
 
   @Get('carriers/list') 
   getAllCarriers() { return this.carrierService.findAll(); }
+
+  @Get('carriers/stats') 
+  getCarrierStats() { return this.carrierService.getStats(); }
+
+  @Get('carriers/station/:stationId')
+  getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
+
+  @Get('carriers/handshake-statuses')
+  getHandshakeStatuses() { return this.carrierService.getHandshakeStatuses(); }
+
+  @Get('carriers/dbprocessdata')
+  getDbProcessData() { return this.carrierService.getDbProcessData(); }
+
+  @Get('carriers/next-resources')
+  getNextResources() { return this.carrierService.getNextResources(); }
+
+  // === Carrier CRUD (params müssen zum Schluss) ===
+
+  @Post('carriers')
+  createCarrier(@Body() dto: CreateCarrierDto) { 
+    return this.carrierService.create(dto); 
+  }
+
+  @Get('carriers/list') 
+  getAllCarriersAlias() { return this.carrierService.findAll(); }
 
   @Get('carriers/:id')
   getCarrier(@Param('id') id: string) { return this.carrierService.findOne(id); }
@@ -34,22 +57,16 @@ export class OrdersController {
     return this.carrierService.update(id, dto as UpdateCarrierDto); 
   }
 
-  @Get('carriers/station/:stationId')
-  getCarriersByStation(@Param('stationId') stationId: string) { return this.carrierService.getByStation(stationId); }
-
-  // === dbProcessData endpoint (Phase 9 MVP) ===
-  @Get('carriers/dbprocessdata')
-  getDbProcessData() { return this.carrierService.getDbProcessData(); }
-
-  @Get('carriers/next-resources')
-  getNextResources() { return this.carrierService.getNextResources(); }
+  @Delete('carriers/:id')
+  deleteCarrier(@Param('id') id: string) { return this.carrierService.remove(id); }
 
   @Post('carriers/:id/advance-step')
   advanceStep(@Param('id') id: string, @Body() body: { next_resource_id?: number | null }) { 
     return this.carrierService.advanceManual(id, body as Omit<AdvanceCarrierDto, 'iStepNo'>); 
   }
 
-  // --- Orders ---
+  // === Orders (params am Schluss) ===
+
   @Post()
   createOrder(@Body() dto: CreateOrderDto) { return this.ordersService.create(dto); }
 
@@ -81,23 +98,26 @@ export class OrdersController {
   deleteOrder(@Param('id') id: string) { return this.ordersService.remove(id); }
 
   @Post(':id/advance-step')
-  advanceStep(@Param('id') id: string) { return this.ordersService.advanceStep(id); }
+  advanceStepOrder(@Param('id') id: string) { return this.ordersService.advanceStep(id); }
 
-  // --- Materials ---
+  // === Materials ===
+
   @Post('materials')
   addMaterial(@Body() dto: CreateMaterialDto) { return this.materialsService.create(dto); }
 
   @Get('materials/:orderId')
   getMaterialsForOrder(@Param('orderId') orderId: string) { return this.materialsService.findByOrderId(orderId); }
 
-  // --- Machine Errors ---
+  // === Machine Errors ===
+
   @Post('errors')
   logError(@Body() dto: any) { return this.machineErrorsService.create(dto); }
 
   @Get('errors/:machineId')
   getMachineErrors(@Param('machineId') machineId: string) { return this.machineErrorsService.findByMachine(machineId); }
 
-  // --- Dispatcher / Health ---
+  // === Dispatcher / Health ===
+
   @Post('dispatcher/trigger/:carrierId')
   async triggerDispatch(@Param('carrierId') carrierId: string) {
     const result = await this.dispatcherService.dispatch(carrierId);

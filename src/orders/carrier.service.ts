@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import type { FindOptionsRelations, FindOptionsSelect } from 'typeorm';
@@ -21,35 +21,11 @@ export class CarrierService {
   ) {}
 
   async create(dto: CreateCarrierDto): Promise<CarrierEntity> {
-    const carrier: any = new CarrierEntity();
+    const carrier = new CarrierEntity();
     carrier.name = dto.name;
-    if (dto.current_station_id_alt) {
-      carrier.current_station_id = dto.current_station_id_alt.toString();
-    }
-    // Write dbProcessData fields directly to DB columns
-    carrier.iCarrierID = dto.iCarrierID ?? null;
-    carrier.iResourceID = dto.iResourceID ?? null;
-    carrier.iPar1 = dto.iPar1 ?? 0;
-    carrier.iPar2 = dto.iPar2 ?? 0;
-    carrier.iPar3 = dto.iPar3 ?? 0;
-    carrier.iPar4 = dto.iPar4 ?? 0;
-    carrier.partNumber = dto.partNumber ?? null;
-    carrier.lastProcessTimestamp = dto.lastProcessTimestamp ?? null;
-    // Fallback: write to legacy process_data JSONB as well for backward compat with UI
-    carrier.process_data = { 
-      iStepNo: dto.iStepNo, 
-      iResourceID: dto.iResourceID,
-      next_resource_id: dto.current_station_id_alt,
-    };
-
-    carrier.order_id = dto.order_id;
-    carrier.iStepNo = dto.iStepNo || 0;
-    carrier.nextStepNo = dto.nextStepNo || 1;
-    carrier.status = dto.status || 'idle' as const;
-    carrier.handshake_flags = { xStart: false, xQryBusy: false, xAck: false };
-
-    const saved = await this.carriersRepo.save(carrier);
-    return saved as CarrierEntity;
+    carrier.status = (dto.status ?? 'idle') as any;
+    console.log('BEFORE SAVE:', JSON.stringify({name: carrier.name, status: carrier.status}));
+    return await this.carriersRepo.save(carrier);
   }
 
   async findAll(): Promise<CarrierEntity[]> {
@@ -70,11 +46,11 @@ export class CarrierService {
   async findOne(id: string): Promise<CarrierEntity> {
     try {
       const carrier = await this.carriersRepo.findOne({ where: { id } });
-      if (!carrier) throw new BadRequestException('Carrier not found');
+      if (!carrier) throw new NotFoundException('Carrier not found');
       return carrier;
     } catch (e) {
-      if (e instanceof BadRequestException) throw e;
-      throw new BadRequestException('Carrier not found');
+      if (e instanceof NotFoundException) throw e;
+      throw new NotFoundException('Carrier not found');
     }
   }
 
@@ -134,10 +110,10 @@ export class CarrierService {
   }
 
   async getHandshakeStatuses(): Promise<Array<{ id: string; name: string; handshake: Record<string, any>; status: string }>> {
-    const carriers = await this.carriersRepo.find({ 
-      select: ['id', 'name', 'handshake_flags', 'status'] as any,
-      where: { status: In(['in_process', 'at_station']) },
-    });
+    const carriers = await this.carriersRepo.createQueryBuilder('c')
+      .select(['c.id', 'c.name', 'c.handshake_flags', 'c.status'])
+      .where("c.status IN (:...statuses)", { statuses: ['in_process', 'at_station'] })
+      .getMany();
 
     return carriers.map(c => ({
       id: c.id,
@@ -242,4 +218,18 @@ export class CarrierService {
 
     return this.carriersRepo.save(carrier);
   }
+
+  async getStats(): Promise<{ total: number; byStatus: Record<string, number>; avgPar1: number }> {
+    const all = await this.findAll();
+    const byStatus: Record<string, number> = {};
+    for (const c of all) {
+      byStatus[c.status] = (byStatus[c.status] || 0) + 1;
+    }
+    return { total: all.length, byStatus, avgPar1: 0 };
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.carriersRepo.delete(id);
+  }
+
 }

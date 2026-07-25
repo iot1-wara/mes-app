@@ -412,30 +412,31 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 
 ---
 
-## 9. Phase 9 — MVP: Unified Production Control Screen (`ProductionControl.tsx`) + dbProcessData Voll-Integration
+## 9. Phase 9 — MVP: Dashboard als Monitor + Produktionssteuerung als Dispatch (getrennt)
 
-**Goal:** Einheitliche Operator-Oberfläche (statt 5+ Pages) mit vollem Focus auf Produktionssteuerung, Werkstückträger-Tracking und Alarm-Handling. Komplette Abbildung von `dbProcessData` (DB151) 7-Feld-Schema + Typ-Anpassungen zur SPS-Kompatibilität.
+**Goal:** Zwei klar getrennte Hauptseiten nach ISA-95 Prinzip:
+1. **Dashboard (`/dashboard`)** = Monitor (OEE/Yield/KPI-Trends/Charts, Mini-Linie als Lesedots, Alarm-Ack-Footer) — Default-Seite nach Login
+2. **Produktionssteuerung (`/control`)** = Dispatch/Interaktiv (interaktive Produktionslinie mit dbProcessData-Stations-Kacheln, xStart-xQryBusy-xAck Buttons, Parameter-Modal pro Station, Schritt-vorwaerts)
 
 **Referenzkonzept:** Siehe `docs/mvp-konzept.md`
 
-### Meilenstein 9.1: Backend-Erweiterungen für dbProcessData
+### Meilenstein 9.1: Backend-Erweiterungen für dbProcessData ✅ Completed
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 9.1.1 | CarrierEntity erweitern auf volle dbProcessData-Felder: iPar1, iPar2, iPar3, iPar4 (Int Spalten), last_process_timestamp (timestamp) + iResourceID von UUID-String auf INTEGER umstellen | Critical | ⬜ pending |
-| 9.1.2 | Neue API Route `GET /orders/carriers/dbprocessdata` liefert alle Carrier mit allen 7 dbProcessData-Feldern komprimiert | High | ⬜ pending |
-| 9.1.3 | Neuer Service: `sps-dispatcher.service.ts` — Mapping von BigInt(dbProcessData.iCarrierID) → String(UpperCase); Handshake xStart/xQryBusy/Ack mit OPC UA/MMQTT write-back | Critical | ⬜ pending |
-| 9.1.4 | Farbe-Kodierung Mapper: iPar1=0..3 → "keine/rot/blau/gruene" als lesbarer String | Medium | ⬜ pending |
+| 9.1.1 | CarrierEntity erweitern auf volle dbProcessData-Felder: iPar1-4 (Int Spalten), last_process_timestamp + iResourceID von UUID-String auf INTEGER | Critical | ✅ done |
+| 9.1.2 | Neue API Route `GET /orders/carriers/dbprocessdata` liefert alle Carrier mit allen 7 Feldern | High | ✅ done |
+| 9.1.3 | Neuer Service: `sps-dispatcher.service.ts` — BigInt↔String Cast, Handshake xStart/xQryBusy/ack/write-back | Critical | ✅ done |
+| 9.1.4 | Farbe-Kodierung Mapper + UI Combo-Box für iPar1 | Medium | ✅ done |
 
-### Meilenstein 9.2: Frontend — ProduktionControl.tsx (neue Hauptseite)
+### Meilenstein 9.2: Frontend — Zwei Seiten: Dashboard + Produktionssteuerung ✅ Completed
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 9.2.1 | Neue Seite `ProductionControl.tsx`: fixierte KPI-Leiste oben (OEE/Yield/Orders + Alarms count) | Critical | ⬜ pending |
-| 9.2.2 | Produktionslinien-Ansicht: Scrollbare horizontal Stationsreihe mit dbProcessData-Caroussel pro Station (Werkst, Schritt, Ziel, Par1..4, Zeitstempel, Handshake-Lichter xStart/xQryBusy/Ack) | Critical | ⬜ pending |
-| 9.2.3 | Workplan-Tabelle: Sortierbar nach Werkst/Schritt/Status mit aktionen Start,Step vorwaerts,Parameter editieren | Critical | ⬜ pending |
-| 9.2.4 | Akkordeon-Alarm-Footer unten: standardmaessig eingeklappt; aufklappen → inline Alarm-Tabelle + Ack Button pro Eintrag | High | ⬜ pending |
-| 9.2.5 | Parameter-Eingabe-Modal (iPar1..4) mit Combo-Box fur Deckelfarbe + Number-Inputs fur Kugel-Anzahlen | Medium | ⬜ pending |
+| 9.2.1-A | **Dashboard (`/dashboard`):** OEE/Yield KPI-Kacheln, Trend-Pareto Charte, Mini-Linie-Monitor (nur lesend), Alarm-Footer-Akkordeon als Hauptseite (/) | Critical | ⬜ pending |
+| 9.2.1-B | **Sidebar:** "Dashboard" oben als erste Navigation + "Produktionssteuerung" darunter | High | ⬜ pending |
+| 9.2.2 | **Produktionssteuerung (`/control`):** Interaktive Produktionslinie mit dbProcessData Station-Kacheln (xStart/xQryBusy Buttons, Parameter-Modal pro Station, Schritt-vorwaerts) | Critical | ⬜ pending |
+| 9.2.3 | Alarm-Footer im Dashboard: standardmäßig eingeklappt → inline Akkordeon mit Ack-BUTTON pro Eintrag | High | ⬜ pending |
 
 ### Meilenstein 9.3: SPS-Kompatibilitaet & Validierung
 
@@ -448,6 +449,7 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 ### Meilenstein 9.4: UI-Nutzungsszenarien-Demo
 
 | # | Task | Priority | Status |
+|---|------|----------|--------|
 |---|------|----------|--------|
 | 9.4.1 | Szenario "Neuer Werktraeger an Station 1": Auftrag → Carrier creation → Handshake in ProductionControl sichtbar | High | ⬜ pending |
 | 9.4.2 | Szenario "Fehler an Station 3": xErrL0/L1/L2 gesetzt über MQTT → Alarm-Banner blinkt + inline Ack | High | ⬜ pending |

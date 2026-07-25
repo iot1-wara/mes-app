@@ -82,9 +82,9 @@ export default function MachinesPage() {
 
         {/* Status-Karten */}
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Alle" value={String(machines.length)} icon="" />
-          <StatCard label="Online" value={String(onlineCount)} icon="✅" />
-          <StatCard label="Offline" value={String(machines.length - onlineCount)} icon="⚠️" />
+          <StatCard label="Alle" value={String(machines.length)} />
+          <StatCard label="Online" value={String(onlineCount)} />
+          <StatCard label="Offline" value={String(machines.length - onlineCount)} />
         </div>
 
         {/* Toolbar */}

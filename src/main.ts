@@ -150,6 +150,7 @@ async function bootstrap() {
         request.user = { userId: payload.sub, username: payload.username, role: payload.role };
       } catch {
         // silently allow unauthenticated requests for dev mode
+        return false;
       }
       return true;
     }

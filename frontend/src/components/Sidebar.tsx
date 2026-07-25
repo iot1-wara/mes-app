@@ -3,7 +3,8 @@ import { logoutUser } from "../api/client";
 import { useState, useEffect } from "react";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: "📊" },
+  { path: "/dashboard", label: "Dashboard", icon: "📊" },
+  { path: "/control", label: "Produktionssteuerung", icon: "🏭" },
   { path: "/machines", label: "Stationen", icon: "⚙️" },
   { path: "/orders", label: "Aufträge", icon: "📋" },
   { path: "/carriers", label: "Werkstücktraeger", icon: "🏭" },
@@ -35,12 +36,12 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="sticky top-0 h-screen w-64 bg-white border-r border-neutral-200 flex flex-col">
-      <div className="p-5 border-b border-neutral-100 flex items-center gap-3">
+    <div className="sticky top-0 h-screen w-[var(--sidebar-width)] bg-neutral-black flex flex-col">
+      <div className="p-5 border-b border-[rgba(255,255,255,0.1)] flex items-center gap-3">
         <img src="/logo.jpg" alt="MES Logo" className="flex-shrink-0 w-28 object-contain" />
         <div>
           <h1 className="text-lg font-bold tracking-wide text-neutral-black"><span className="text-brand-primary">MES </span>Edge</h1>
-          <p className="text-xs text-neutral-400 mt-1">Process Gateway</p>
+          <p className="text-xs text-neutral-light mt-1">Process Gateway</p>
         </div>
       </div>
 
@@ -51,10 +52,10 @@ export default function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 ${
+              className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 isActive
-                  ? "bg-brand-primary text-white shadow-sm"
-                  : "text-neutral-dark hover:bg-neutral-stroke hover:text-neutral-black"
+                  ? "bg-brand-primary text-white"
+                  : "text-neutral-dark hover:bg-neutral-stroke hover:text-neutral-black transition-colors duration-150"
               }`}
             >
               <span className="text-base leading-none">{item.icon}</span>
@@ -64,13 +65,13 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-neutral-100">
+      <div className="p-3 border-t border-[rgba(255,255,255,0.1)]">
         <button onClick={() => { logoutUser(); window.location.href = "/auth/login"; }} className="w-full py-2 text-sm text-status-error hover:text-status-error-dark font-medium rounded-md hover:bg-status-error-bg transition-colors">Abmelden</button>
-        <div className="flex items-center gap-2 text-xs text-neutral-400 mt-2">
+        <div className="flex items-center gap-2 text-xs text-neutral-light mt-2">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
           Edge aktiv
         </div>
-        <button onClick={toggleLang} className="w-full py-2 mt-2 text-xs font-mono border border-neutral-200 rounded-md text-neutral-500 hover:bg-neutral-50">
+        <button onClick={toggleLang} className="w-full py-2 mt-2 text-xs font-mono border border-[rgba(255,255,255,0.1)] rounded-md text-neutral-light hover:bg-neutral-stroke">
           {lang.toUpperCase()}
         </button>
       </div>

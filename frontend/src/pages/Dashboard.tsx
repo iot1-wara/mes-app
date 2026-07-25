@@ -1,9 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../api/client";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 import { getStatusBadge, getStatusDot, getPriorityColor, getCarrierStatusStyles, getCarrierStatusBarClass, getMachineStatusGradientClass, getHandshakeDotClass } from "../utils/helpers";
 import StatCard from "../components/StatCard";
+
+// i18n compatibility (if global i18n is available)
+declare global {
+  var i18n: any;
+}
+
+interface AlarmRecord {
+  id: string;
+  severity: string;
+  machine_id: string;
+  message: string;
+  created_at: string;
+  acknowledged: boolean;
+}
 
 interface CarrierItem {
   id: string;
@@ -43,8 +58,10 @@ interface ParetoPoint {
 export default function DashboardPage() {
   const [machines, setMachines] = useState<MachineItem[]>([]);
   const [carriers, setCarriers] = useState<CarrierItem[]>([]);
-  const [orders, setOrders] = useState<Record<string, unknown>[]>([]);
-  const [activeAlarms, setActiveAlarms] = useState(0);
+  const [orders, setOrders] = useState<Record<string, unknown | string | number>[]>([]);
+  const [activeAlarmsCount, setActiveAlarmsCount] = useState(0);
+  const [alarmsList, setAlarmsList] = useState<AlarmRecord[]>([]);
+  const [alarmExpanded, setAlarmExpanded] = useState(false);
   const [oeeData, setOeeData] = useState<OeeData>({ availability: 0, performance: 0, quality: 0, overall: 0 });
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [paretoData, setParetoData] = useState<ParetoPoint[]>([]);
@@ -76,17 +93,19 @@ export default function DashboardPage() {
       api.get("/dashboard/oee").catch(() => ({ availability: 0, performance: 0, quality: 0, overall: 0 })),
       api.get(`/dashboard/trend?range=${timeRange}`).catch(() => []),
       api.get("/machines/errors/pareto").catch(() => []),
+      api.get("/alarms/active").catch(() => []),
     ]);
 
-    const [mRes, cRes, oRes, aRes, oeeRes, tRes, pRes] = res;
+    const [mRes, cRes, oRes, aRes, oeeRes, tRes, pRes, alRes] = res;
 
     if (mRes.status === "fulfilled" && Array.isArray(mRes.value)) setMachines(mRes.value);
     if (cRes.status === "fulfilled" && Array.isArray(cRes.value)) setCarriers(cRes.value);
     if (oRes.status === "fulfilled" && Array.isArray(oRes.value)) setOrders(oRes.value);
-    if (aRes.status === "fulfilled" && aRes.value) setActiveAlarms(Number((aRes.value as { count: number }).count) || 0);
+    if (aRes.status === "fulfilled" && aRes.value) setActiveAlarmsCount(Number((aRes.value as { count: number }).count) || 0);
     if (oeeRes.status === "fulfilled" && oeeRes.value) setOeeData(oeeRes.value as OeeData);
     if (tRes.status === "fulfilled" && Array.isArray(tRes.value)) setTrendData(tRes.value as TrendPoint[]);
     if (pRes.status === "fulfilled" && Array.isArray(pRes.value)) setParetoData(pRes.value as ParetoPoint[]);
+    if (alRes.status === "fulfilled" && Array.isArray(alRes.value)) setAlarmsList(alRes.value as AlarmRecord[]);
   }, [timeRange]);
 
   const loadTrendData = useCallback(async () => {
@@ -108,7 +127,7 @@ export default function DashboardPage() {
     return {
       id: m.id,
       name: m.name || `Station ${i + 1}`,
-      status: m.status === "online" ? "online" : "offline",
+      status: m.status as 'online' | 'offline',
       quality: m.quality as string,
       carrier,
       lastValue: m.last_value,
@@ -120,8 +139,18 @@ export default function DashboardPage() {
 
   const handleRefresh = () => loadData();
 
+  const ackAlarm = useCallback(async (id: string) => {
+    try {
+      await api.post(`/alarms/${id}/acknowledge`, {});
+      setAlarmsList(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
+      setActiveAlarmsCount(prev => Math.max(0, prev - 1));
+    } catch {}
+  }, []);
+
+  const unackAlarms = alarmsList.filter(a => !a.acknowledged);
+
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="pl-[var(--sidebar-width)] flex-1 overflow-auto bg-neutral-50">
       <main className="p-[var(--space-xl)]">
         {/* Top Section: Header + KPIs in one row */}
         <div className="bg-white rounded-[var(--radius-lg)] shadow-card border border-neutral-border p-6 mb-6 hover:shadow-hover transition-shadow duration-200">
@@ -201,111 +230,82 @@ export default function DashboardPage() {
             </div>
 
             {/* Active Alarms */}
-            <div className={`flex flex-col p-5 rounded-lg relative overflow-hidden ${activeAlarms > 0 
+            <div className={`flex flex-col p-5 rounded-lg relative overflow-hidden ${activeAlarmsCount > 0 
               ? "text-white kpi-gradient-error kpi-glow-error" 
               : "text-white kpi-gradient-alarm-off"}`}>
-              {activeAlarms > 0 && (
+              {activeAlarmsCount > 0 && (
                 <svg className="w-5 h-5 text-white/80 absolute top-5 right-5 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
               )}
               <span className="text-xs font-semibold text-white/80 uppercase tracking-wide">Aktive Alarme</span>
               <div className="flex items-end gap-2 mt-2">
-                <span className="text-[var(--text-4xl-size)] leading-none font-extrabold">{activeAlarms}</span>
+                <span className="text-[var(--text-4xl-size)] leading-none font-extrabold">{activeAlarmsCount}</span>
               </div>
-              {activeAlarms > 0 && (
-                <div className="mt-3 w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${activeAlarms > 5 ? 'bg-red-400' : 'bg-yellow-300'}`} style={{ width: `${Math.min(100, (activeAlarms / 5) * 100)}%` }} />
-                </div>
+              {activeAlarmsCount > 0 && (
+                  <div className={`mt-3 w-full h-1.5 bg-white/20 rounded-full overflow-hidden`}>
+                    <div className={`h-full rounded-full transition-all duration-500 ${activeAlarmsCount > 5 ? 'bg-status-error' : 'bg-status-warning'}`} style={{ width: `${Math.min(100, (activeAlarmsCount / 5) * 100)}%` }} />
+                  </div>
               )}
             </div>
           </div>
 
-          {/* Production Line Compact */}
+          {/* Production Line Compact — Mini-Monitor (nur Lesedots) */}
           <div className="mt-6 pt-6 border-t border-neutral-border">
-            <h3 className="text-[var(--text-lg-size)] font-semibold text-neutral-black mb-3">Produktionslinie</h3>
-            
-            {/* Legend */}
-            <div className="flex gap-5 mb-4 text-xs text-neutral-mid flex-wrap">
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-status-success animate-pulse" /> Online</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-status-warning" /> Idle/Wartung</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-status-error" /> Error</span>
-              <span className="inline-flex items-center gap-1.5"><span className="line-flow-dot w-2 h-2" style={{ background: 'var(--color-brand-primary)' }} /> Flow Active</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand-lilac" /> An Station</span>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[var(--text-lg-size)] font-semibold text-neutral-black">Produktionslinie</h3>
+              <Link to="/control" className="text-xs text-brand-primary hover:underline">Zur Produktionssteuerung {"\u2192"}</Link>
             </div>
-
-            {/* Line Overview */}
-            <div className="flex items-start gap-0 overflow-x-auto pb-4 pl-2 relative">
+            
+            <div className="flex items-center gap-0 overflow-x-auto pb-3 pl-2">
               {lineStations.map((station, i) => (
-                <div key={station.id} className="flex items-center min-w-[130px]">
-                  {/* Animated flow connector */}
+                <div key={station.id} className="flex items-center min-w-[140px]">
+                  {/* Flow connector — nur anzeigen wenn Carrier da */}
                   {i > 0 && (
-                    <>
-                      <div 
-                        className={`flow-connector ${
-                          station.carrier ? 'flow-connector-active' : ''
-                        }`} 
-                      />
-                    </>
+                    <div className={`flow-connector ${station.carrier ? 'flow-connector-active' : ''}`} />
                   )}
 
-                  {/* Station block — gradient top-border */}
-                  <div className="w-[110px] flex flex-col items-center space-y-2.5">
-                    <div className={`rounded-lg p-2.5 text-center transition-all duration-300 cursor-pointer shadow-card hover:shadow-hover w-full ${getMachineStatusGradientClass(station.status)}`}>
+                  {/* Station name + Status-Dot (LESSEND) */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`w-full rounded-lg p-2 text-center transition-all ${getMachineStatusGradientClass(station.status as 'online' | 'offline')}`}>
                       <div className="text-[var(--text-xs-size)] font-semibold text-neutral-black truncate">{station.name}</div>
-                      <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadge(station.status)}`}>
+                      <span className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(station.status)}`}>
                         <span className={`w-1 h-1 rounded-full ${getStatusDot(station.status)}`} />
-                        {station.status}
                       </span>
                     </div>
 
-                    {/* Quality + Last Value */}
+                    {/* Carrier Dot — klein + lesend (KEINE Station-Karten mehr!) */}
                     <div className="flex flex-col items-center gap-0.5">
-                      <button
-                        type="button"
-                        title={station.quality === "good" ? "Qualit\u00E4t: Gut" : station.quality === "bad" ? "Qualit\u00E4t: Schlecht" : "Keine Daten"}
-                        className={`w-2.5 h-2.5 rounded-full ring-2 ring-white transition-all duration-300 ${getStatusDot(station.quality === "good" ? "online" : station.quality === "bad" ? "error" : "offline")}`}
-                      />
-                      {station.lastValue != null && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${station.quality === "good" ? "bg-status-success-bg text-status-success" : "bg-status-error-bg text-status-error"}`}>
-                          {station.lastValue.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Carrier block — enhanced */}
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div 
-                        className={`w-[60px] h-[60px] rounded-lg flex items-center justify-center shadow-card transition-all duration-300 cursor-pointer hover:scale-105 ${getCarrierStatusStyles(station.carrier?.status)}`}
-                      >
-                        <span className="text-[11px] font-mono leading-none text-neutral-dark">
-                          {station.carrier ? (station.carrier.name || "C").substring(0, 3).toUpperCase() : "\u2014"}
-                        </span>
-                      </div>
-
-                      {/* Status bar under carrier */}
-                      <div className={`w-[60px] h-[3px] rounded-full overflow-hidden ${getCarrierStatusBarClass(station.carrier?.status)}`} />
-
-                      {/* Handshake flags — unified dots */}
-                      <div className="flex gap-1.5 mt-0.5">
-                        {station.xStart && (
-                          <span title="xStart: MES-Anfrage" className={getHandshakeDotClass(true, "success")} />
-                        )}
-                        {station.xQryBusy && (
-                          <span title="xQryBusy: Processing" className={getHandshakeDotClass(true, "brand")} />
-                        )}
-                        {station.xAck && (
-                          <span title="xAck: Best\u00E4tigt" className={getHandshakeDotClass(true, "info")} />
-                        )}
-                      </div>
-
-                      {/* Carrier status label */}
-                      {station.carrier?.status && (
-                        <span className="text-[9px] text-neutral-mid whitespace-nowrap capitalize">{station.carrier.status.replace(/_/g, " ")}</span>
+                      {station.carrier ? (
+                        <>
+                          <div 
+                            className={`w-[48px] h-[48px] rounded-lg flex items-center justify-center shadow-card transition-all ${getCarrierStatusStyles(station.carrier.status as any)}`}
+                            title={station.carrier.name + " -> " + (station.carrier.next_resource_id || "Ziel offen")}
+                          >
+                            <span className="text-[10px] font-mono text-neutral-dark">
+                              {station.carrier.name ? station.carrier.name.substring(0, 2).toUpperCase() : "C"}
+                            </span>
+                          </div>
+                          <div className={`w-[48px] h-[3px] rounded-full overflow-hidden ${getCarrierStatusBarClass(station.carrier.status as any)}`} />
+                          {station.lastValue != null && (
+                <span className="text-[9px] px-1 font-mono rounded">
+                              {station.lastValue.toFixed(0)}
+                            </span>
+                          )}
+                          {/* Mini Handshake-Dots */}
+                          <div className="flex gap-1 mt-0.5">
+                            {station.xStart && <span title="xStart" className={getHandshakeDotClass(true, "success")} />}
+                            {station.xQryBusy && <span title="xBusy" className={getHandshakeDotClass(true, "brand")} />}
+                            {station.xAck && <span title="xAck" className={getHandshakeDotClass(true, "info")} />}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-[48px] h-[48px] rounded-lg border border-neutral-border/50 bg-white flex items-center justify-center">
+                          <span className="text-xs text-neutral-light opacity-40">{"\u2014"}</span>
+                        </div>
                       )}
                     </div>
                   </div>
-
                 </div>
               ))}
             </div>
@@ -390,21 +390,21 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {orders.map((o, idx) => (
-                  <tr key={o.id} className="border-b border-neutral-stroke hover:bg-neutral-stroke/50 transition-colors">
-                    <td className="px-6 py-4 text-[var(--text-base-size)] text-neutral-dark font-medium">{o.name}</td>
+                  <tr key={o.id as string} className="border-b border-neutral-stroke hover:bg-neutral-stroke/50 transition-colors">
+                    <td className="px-6 py-4 text-[var(--text-base-size)] text-neutral-dark font-medium">{String(o.name)}</td>
                     <td className="px-6 py-4 w-32">
                       <div className="w-full h-2 bg-neutral-border rounded-full overflow-hidden">
                         <div className="h-full bg-brand-primary transition-all" style={{ width: `${Math.max(0, ((o.completed_quantity as number) / (o.quantity as number)) * 100)}%` }} />
                       </div>
-                      <span className="text-xs text-neutral-mid mt-1 block">{o.completed_quantity}/{o.quantity}</span>
+                      <span className="text-xs text-neutral-mid mt-1 block">{String(o.completed_quantity ?? '')}/{String(o.quantity ?? '')}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(o.status as string)}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(o.status as string)}`} />
-                        {o.status}
+                        {String(o.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-[var(--text-base-size)] text-neutral-dark font-mono">{o.priority != null ? <span className={getPriorityColor(String(o.priority))}>{o.priority}</span> : "-"}</td>
+                    <td className="px-6 py-4 text-[var(--text-base-size)] text-neutral-dark font-mono">{o.priority != null ? <span className={getPriorityColor(String(o.priority))}>{String(o.priority)}</span> : "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -416,6 +416,49 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Alarm-Footer (Akkordeon — standardmaessig eingeklappt) */}
+        <section className="bg-neutral-900 text-white p-6 rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
+          <button 
+            onClick={() => setAlarmExpanded(!alarmExpanded)}
+            className="flex items-center gap-2 bg-brand-primary/80 text-white px-6 py-3 rounded-lg hover:bg-brand-primary transition-colors"
+          >
+            {"\u{1F514}"} ({unackAlarms.length}) {alarmExpanded ? "Alarme ausblenden" : "Alarm anzeigen"}
+            <span className={`transition-transform ml-auto text-xl ${alarmExpanded ? 'rotate-180' : ''}`}>{"\u2B9F"}</span>
+          </button>
+
+          {alarmExpanded && (
+            <div className="mt-4 space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+              {unackAlarms.length > 0 ? unackAlarms.map(alarm => {
+                const severityColors = {
+                  info: 'bg-lilac/10 text-lilac border-lilac/20',
+                  warning: 'bg-warning/10 text-warning border-warning/30',
+                  error: 'bg-error/10 text-error border-error/30',
+                  critical: 'bg-red-900/80 text-white border-red-700',
+                };
+                const colors = severityColors[alarm.severity as keyof typeof severityColors] || severityColors.info;
+                return (
+                  <div key={alarm.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${colors} hover:bg-black/5 transition-colors`}>
+                    <button 
+                      onClick={() => ackAlarm(alarm.id)} 
+                      className="bg-white/20 text-white px-2 py-1 rounded text-xs hover:bg-white/30 transition-colors"
+                    >
+                      Ack
+                    </button>
+                    <span className="font-mono text-[11px] opacity-70">{alarm.machine_id.substring(0, 8)}</span>
+                    <span className={`text-xs font-medium capitalize ${alarm.severity === 'error' || alarm.severity === 'critical' ? 'text-error' : ''}`}>
+                      {alarm.severity}
+                    </span>
+                    <span className="text-sm truncate flex-1">{alarm.message}</span>
+                  </div>
+                );
+              }) : (
+                <p className="text-center text-neutral-light">Keine Alarme</p>
+              )}
+            </div>
+          )}
+        </section>
+
       </main>
     </div>
   );

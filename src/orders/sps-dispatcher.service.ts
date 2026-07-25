@@ -90,8 +90,8 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     this.logger.log('SPS Dispatcher initialized');
     
-    const sub1 = this.mqttService.onMessage('mes/production/+/#', (topic: string, data: any) => {
-      this.handleProductionEvent(topic, data);
+    const sub1 = this.mqttService.onMessage('mes/production/+/#', (data: any) => {
+      this.handleProductionEvent('mes/production', data);
     });
     this.subscriptions.set('mes/production/#', sub1);
     
@@ -296,10 +296,10 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
       // Subscribe to xStart for this resource
       const topic = `mes/production/${resourceId ? `r${resourceId}` : '+'}/xStart`;
       
-      const sub = this.mqttService.onMessage(topic, (t: string, data: any) => {
+      const sub = this.mqttService.onMessage(topic, (data: any) => {
         if (data.carrier_id?.toUpperCase().includes(expectedCarrierId.toUpperCase()) ||
             data.resource_id === resourceId ||
-            t.includes(String(resourceId))) {
+            topic.includes(String(resourceId))) {
           
           resolve({
             xStart: true,
@@ -334,7 +334,7 @@ export class SpsDispatcherService implements OnModuleInit, OnModuleDestroy {
 
       // Dispatch automatically if xStart detected
       if (data.xStart) {
-        this.dispatch(carrierId, resourceId).catch(e => {
+        this.dispatch(carrierId, data.resource_id).catch(e => {
           this.logger.error(`Dispatch failed: ${e.message}`);
         });
       }
