@@ -14,9 +14,11 @@ import { AlarmsNotificationListener } from './alerts-notification-listener.servi
 import { EdgeGatewayModule } from '../opcua/edge-gateway.module';
 import { EventBusModule } from '../events/event-gateway.module';
 import { DataCollectionModule } from '../data-collection/data-collection.module';
+import { OrdersModule } from '../orders/orders.module';
+import { MqttModule } from '../opcua/mqtt.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([NotificationEntity, AlertRuleEntity, ShiftEntity]), EdgeGatewayModule, EventBusModule, DataCollectionModule],
+  imports: [TypeOrmModule.forFeature([NotificationEntity, AlertRuleEntity, ShiftEntity]), EdgeGatewayModule, EventBusModule, DataCollectionModule, OrdersModule, MqttModule],
   providers: [EmailService, PushService, MqttAlertService, AlertRulesEngineService, ShiftService, AlarmsNotificationListener],
   exports: [EmailService, PushService, MqttAlertService, AlertRulesEngineService, ShiftService],
   controllers: [AlertRulesController, ShiftsController],

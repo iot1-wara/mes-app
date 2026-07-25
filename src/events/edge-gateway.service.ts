@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import type { Server as WSServer } from 'ws';
 
 type Socket = import('ws').WebSocket;
@@ -7,13 +7,8 @@ let wsServer: WSServer | null = null;
 const clients = new Map<string, { socket: Socket; topics: Set<string> }>();
 const logger = new Logger('EventGateway');
 
-@Injectable()
-export class EventGateway implements OnModuleInit {
-  onModuleInit() {
-    // Initialize ws server only during module init (after Express is ready)
-    const appRef = undefined as any;
-    // We'll expose the setup for manual registration in main.ts
-  }
+export class EventGateway {
+  static instance: EventGateway;
 
   static listen(server: import('http').Server) {
     if (wsServer) return;
@@ -76,16 +71,25 @@ export class EventGateway implements OnModuleInit {
 
   broadcast(topic: string, data: any) {
     const payload = JSON.stringify({ type: topic, ...data });
-    for (const [, entry] of clients) {
+    for (const [id, entry] of clients) {
       if (entry.socket.readyState === 1) {
-        const hasTopic = [...entry.topics].some(t => t === topic || topic.startsWith(t + '/'));
-        if (hasTopic || entry.topics.size === 0) {
+        let hasTopic = false;
+        if (entry.topics.size === 0) {
+          hasTopic = true;
+        } else {
+          for (const t of entry.topics) {
+            if (t === topic || topic.startsWith(t + '/') || topic.startsWith(t)) {
+              hasTopic = true;
+              break;
+            }
+          }
+        }
+        if (hasTopic) {
           try { entry.socket.send(payload); } catch {}
         }
       }
     }
   }
-
   broadcastAll(data: any) {
     const payload = JSON.stringify({ type: 'global', ...data });
     for (const [, entry] of clients) {

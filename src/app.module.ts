@@ -19,6 +19,8 @@ import { AppService } from './app.service';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuthGuard } from './guards/auth.guard';
 import { CarriersModule } from './carriers/carriers.module';
+import { MqttGatewayService } from './opcua/mqtt-gateway.service';
+import { MqttModule } from './opcua/mqtt.module';
 
 @Module({
   imports: [
@@ -47,10 +49,11 @@ import { CarriersModule } from './carriers/carriers.module';
     DataCollectionModule,
     EdgeGatewayModule,
     OpcUaModule,
-    EventBusModule,
+    EventBusModule.forRoot(),
     DashboardModule,
     NotificationsModule,
     CarriersModule,
+    MqttModule,
   ],
   controllers: [AppController],
   providers: [AppService, AuthGuard],

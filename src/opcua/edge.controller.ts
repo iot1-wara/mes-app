@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Delete, Put, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Delete, Put, Patch, BadRequestException } from '@nestjs/common';
 import { OpcUaService, OpcUaStationConfig, OpcUaStationStatus } from './opcua.service';
 import { MqttGatewayService } from './mqtt-gateway.service';
 import { join } from 'path';
@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MachineEntity } from '../machines/machine.entity';
 import { CarrierService } from '../orders/carrier.service';
+import { OrdersService } from '../orders/orders.service';
 
 const OPCUA_CONFIG_PATH = process.env.OPCUA_CONFIG_FILE || join(__dirname, '../../opcuastations.json');
 
@@ -44,6 +45,7 @@ export class EdgeController {
     private readonly mqttGatewayService: MqttGatewayService,
     @InjectRepository(MachineEntity)
     private readonly machinesRepo: Repository<MachineEntity>,
+    private readonly ordersService: OrdersService,
   ) {}
 
   @Get('opcua/status')
@@ -106,6 +108,28 @@ export class EdgeController {
 
   // --- MQTT ---
 
+  @Get('mqtt/status')
+  getMqttStatus(): any { return this.mqttGatewayService.getStatus(); }
+
+  @Post('mqtt/config')
+  setMqttConfig(@Body() dto: { brokerUrl?: string; username?: string; password?: string }): any {
+    const config = this.mqttGatewayService.setMqttConfig(dto || {});
+    return { saved: true, config };
+  }
+
+  @Post('mqtt/connect')
+  async connectMqtt(@Body() dto: any) {
+    console.log('[EdgeController] mqtt/connect body:', JSON.stringify(dto));
+    const ok = await this.mqttGatewayService.connectToBroker(dto?.brokerUrl || 'mqtt://localhost:1883', dto?.username, dto?.password);
+    return { connected: ok };
+  }
+
+  @Post('mqtt/disconnect')
+  async disconnectMqtt() {
+    await this.mqttGatewayService.disconnectFromBroker();
+    return { disconnected: true };
+  }
+
   @Get('mqtt/connected')
   mqttConnected() { return { connected: this.mqttGatewayService.isConnected() }; }
 
@@ -113,6 +137,49 @@ export class EdgeController {
   publishToMqtt(@Body('topic') topic: string, @Body('payload') payload: any) {
     this.mqttGatewayService.publish(topic, payload);
     return { published: true, topic };
+  }
+
+  @Post('mqtt/order/import')
+  async importWebshopOrder(@Body() payload: any) {
+    const bDeckelfarbe = String(payload.bDeckelfarbe || 'grau');
+    const uiKugelRot = Number(payload.uiKugelRot) || 0;
+    const uiKugelGruen = Number(payload.uiKugelGruen) || 0;
+    const uiKugelBlau = Number(payload.uiKugelBlau) || 0;
+    const totalQty = uiKugelRot + uiKugelGruen + uiKugelBlau;
+
+    if (totalQty <= 0) {
+      throw new BadRequestException('Total quantity must be > 0');
+    }
+
+    const machinesWithOpcua = await this.machinesRepo.find({ where: {} as Partial<MachineEntity> });
+    const targetMachine = machinesWithOpcua.find(m => m.status === 'online') || (machinesWithOpcua.length > 0 ? machinesWithOpcua[0] : null);
+
+    if (!targetMachine) {
+      throw new BadRequestException('No available machines for order creation');
+    }
+
+    let operation = 'Webshop Auftrag - Kugeln setzen';
+    const colorLower = bDeckelfarbe.toLowerCase();
+    if (colorLower.includes('rot')) operation = 'Webshop Auftrag - Deckel rot + Kugeln setzen';
+    else if (colorLower.includes('blau')) operation = 'Webshop Auftrag - Deckel blau + Kugeln setzen';
+    else if (colorLower.includes('gün') || colorLower.includes('grü') || colorLower.includes('green')) operation = 'Webshop Auftrag - Deckel grün + Kugeln setzen';
+
+    const orderName = `Webshop - Deckel ${bDeckelfarbe} (${totalQty}x Kugeln: R:${uiKugelRot}, G:${uiKugelGruen}, B:${uiKugelBlau})`;
+
+    const order = await this.ordersService.create({
+      name: orderName,
+      priority: 3,
+      machine_id: targetMachine.id,
+      operation,
+      quantity: totalQty,
+    });
+
+    return { success: true, orderId: order.id, orderName };
+  }
+
+  @Post('mqtt/order/auto-create')
+  async toggleAutoCreate(@Body('enabled') enabled: boolean) {
+    return { autoCreate: enabled };
   }
 
   // --- Health ---

@@ -1,9 +1,16 @@
-import { Module } from '@nestjs/common';
-import { EventGateway } from './edge-gateway.service';
+import { Module, DynamicModule } from '@nestjs/common';
 import { EventBusService } from './event-bus.service';
 
 @Module({
-  providers: [EventGateway, EventBusService],
+  providers: [EventBusService],
   exports: [EventBusService],
 })
-export class EventBusModule {}
+export class EventBusModule {
+  static forRoot(): DynamicModule {
+    return {
+      module: EventBusModule,
+      providers: [EventBusService],
+      exports: [EventBusService],
+    };
+  }
+}

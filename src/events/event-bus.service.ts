@@ -1,4 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import type { EventGateway } from './edge-gateway.service';
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __event_gateway__: EventGateway | undefined;
+}
 
 export interface SubscriberCallback {
   (data: any): void;
@@ -37,6 +43,12 @@ export class EventBusService implements OnModuleInit {
   emitBulk(topics: Map<string, any>) {
     for (const [topic, data] of topics) {
       this.emit(topic, data);
+    }
+  }
+
+  broadcast(topic: string, data: any) {
+    if (globalThis.__event_gateway__) {
+      globalThis.__event_gateway__.broadcast(topic, data);
     }
   }
 }

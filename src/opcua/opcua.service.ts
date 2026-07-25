@@ -144,7 +144,7 @@ export class OpcUaService implements OnModuleInit, OnModuleDestroy {
         address: value.address,
         connected: value.connected ?? false,
         nodesResolved: value.nodesResolved ?? false,
-        lastEventAt: value.lastEventAt,
+        lastEventAt: value.lastEventAt ? (value.lastEventAt as unknown as Date) : undefined,
         currentCarrierId: value.currentCarrierId ?? null,
       });
     });

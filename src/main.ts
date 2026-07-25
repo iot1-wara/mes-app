@@ -141,8 +141,10 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   const httpServer = await app.listen(port);
   
-  // Register raw WebSocket server after HTTP (no Socket.IO, plain ws for frontend compatibility)
+   // Register raw WebSocket server after HTTP (no Socket.IO, plain ws for frontend compatibility)
   const { EventGateway } = await import('./events/edge-gateway.service');
+  EventGateway.instance = new EventGateway();
+  globalThis.__event_gateway__ = EventGateway.instance;
   EventGateway.listen(httpServer);
   
   console.log(`\nMES Edge Gateway running on http://localhost:${port}\nFrontend:     http://localhost:${port}\nAPI (REST):   http://localhost:${port}/api/...\nSwagger:      http://localhost:${port}/api/docs\n`);
