@@ -21,6 +21,7 @@ interface MqttBrokerConfig {
   username?: string;
   password?: string;
   connected: boolean;
+  autoCreateOrders?: boolean;
 }
 
 @Injectable()
@@ -30,7 +31,7 @@ export class MqttGatewayService implements OnModuleInit {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private readonly logger = new Logger(MqttGatewayService.name);
-  private currentStatus: MqttBrokerConfig = { brokerUrl: 'mqtt://localhost:1883', connected: false, username: undefined, password: undefined };
+  private currentStatus: MqttBrokerConfig = { brokerUrl: 'mqtt://localhost:1883', connected: false, username: undefined, password: undefined, autoCreateOrders: true };
 
    constructor(
     private readonly configService: ConfigService,
@@ -43,14 +44,33 @@ export class MqttGatewayService implements OnModuleInit {
     return { ...this.currentStatus };
   }
 
-  async setMqttConfig(config: Partial<MqttBrokerConfig>): Promise<MqttBrokerConfig> {
-    const oldConfig = this.getMqttConfig();
-    this.currentStatus = { ...this.currentStatus, ...config };
+   async setMqttConfig(config: Partial<MqttBrokerConfig>): Promise<MqttBrokerConfig> {
+    const oldStatus = { ...this.currentStatus };
+
+    // Only update the fields that are explicitly provided (not undefined)
+    if (config.brokerUrl !== undefined) this.currentStatus.brokerUrl = config.brokerUrl;
+    if (config.username !== undefined) this.currentStatus.username = config.username;
+    if (config.password !== undefined) this.currentStatus.password = config.password;
+    if (config.autoCreateOrders !== undefined) this.currentStatus.autoCreateOrders = config.autoCreateOrders;
+
+    // Always save full status including autoCreateOrders
     await this.saveMqttConfig();
 
-    if (config.brokerUrl !== oldConfig.brokerUrl || config.username !== oldConfig.username || config.password !== oldConfig.password) {
+    // Only disconnect/reconnect if broker URL or credentials changed
+    const brokerOrCredsChanged = (config.brokerUrl || config.username || config.password) && (
+      config.brokerUrl !== oldStatus.brokerUrl ||
+      config.username !== oldStatus.username ||
+      config.password !== oldStatus.password
+    );
+    
+    if (brokerOrCredsChanged) {
       await this.disconnectFromBroker();
       await this.connectToBroker(config.brokerUrl, config.username, config.password);
+    }
+    
+    // Broadcast autoCreate change to frontend WS clients
+    if (config.autoCreateOrders !== undefined && config.autoCreateOrders !== oldStatus.autoCreateOrders) {
+      this.eventBus.broadcast('mqtt/auto-create', { enabled: config.autoCreateOrders });
     }
     
     return { ...this.currentStatus };
@@ -78,6 +98,9 @@ export class MqttGatewayService implements OnModuleInit {
       this.currentStatus.username = savedConfig.username;
       this.currentStatus.password = savedConfig.password;
     }
+    // Persist autoCreateOrders in config file
+    this.currentStatus.autoCreateOrders = (savedConfig?.autoCreateOrders !== undefined) ? savedConfig.autoCreateOrders : true;
+    await this.saveMqttConfig();
     const brokerUrl = this.configService.get('MQTT_BROKER_URL') || savedConfig?.brokerUrl || 'mqtt://localhost:1883';
     let connectedOnFirstTry = false;
 
@@ -175,6 +198,11 @@ export class MqttGatewayService implements OnModuleInit {
       return;
     }
 
+    if (!this.currentStatus.autoCreateOrders) {
+      this.logger.log(`[MQTT Order] Auto-create disabled — pending order (${totalQty} items), waiting for manual creation`);
+      return;
+    }
+
     try {
       const machines = await this.machinesService.findAll();
       const targetMachine = machines.find((m: any) => m.status === 'online') || (machines.length > 0 ? machines[0] : null);
@@ -225,7 +253,11 @@ export class MqttGatewayService implements OnModuleInit {
       };
 
       this.client = mqtt.connect(brokerUrl, options);
-      this.currentStatus = { brokerUrl, connected: false, username, password };
+      // Preserve autoCreateOrders and other existing fields
+      const preservedStatus: Partial<MqttBrokerConfig> = { brokerUrl, connected: false };
+      if (username !== undefined) preservedStatus.username = username;
+      if (password !== undefined) preservedStatus.password = password;
+      this.currentStatus = { ...this.currentStatus, ...preservedStatus };
       await this.saveMqttConfig();
 
       this.setupClientEvents(brokerUrl, false);
