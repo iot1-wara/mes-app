@@ -287,11 +287,6 @@ export default function ProductionControlPage() {
           const alarmData = await api.get('/alarms/active').catch(() => []);
           if (Array.isArray(alarmData)) setAlarmsList(alarmData as AlarmRecord[]);
         })(),
-        // Edge Dashboard — explizites Mapping von OPC UA Station ↔ Maschine
-        (async () => {
-          const dash = await api.get('/edge/dashboard').catch(() => null);
-          if (dash) setEdgeDash(dash as any);
-        })(),
         // OPC UA Config für Zuordnung
         (async () => {
           const conf = await api.get('/edge/opcua/config').catch(() => []);

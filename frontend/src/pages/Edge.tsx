@@ -9,7 +9,7 @@ interface StationStatus {
   nodesResolved: boolean;
 }
 
-interface StationConfig {
+interface OpcUaConnectionConfig {
   id: number;
   address: string;
   name: string;
@@ -56,8 +56,8 @@ export default function EdgePage() {
   const [tab, setTab] = useState<"monitor" | "config" | "mqtt-monitor" | "mqtt-config">("monitor");
   const [stations, setStations] = useState<StationStatus[]>([]);
   const [events, setEvents] = useState<HandshakeEvent[]>([]);
-  const [config, setConfig] = useState<StationConfig[]>([]);
-  const [editingConfig, setEditingConfig] = useState<StationConfig[]>([]);
+  const [config, setConfig] = useState<OpcUaConnectionConfig[]>([]);
+  const [editingConfig, setEditingConfig] = useState<OpcUaConnectionConfig[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [saved, setSaved] = useState(false);
   const [reloading, setReloading] = useState(false);
@@ -205,10 +205,10 @@ export default function EdgePage() {
       setTimeout(() => setSaved(false), 3000);
       
       // Also sync all machine assignments to DB
-      for (const station of editingConfig) {
-        if (station.opcuaStationId) {
+      for (const connection of editingConfig) {
+        if (connection.opcuaStationId) {
           try {
-            await api.patch("/machines/" + station.opcuaStationId, { opcua_station_id: station.id });
+            await api.patch("/machines/" + connection.opcuaStationId, { opcua_station_id: connection.id });
           } catch {}
         }
       }
@@ -225,7 +225,7 @@ export default function EdgePage() {
     setReloading(true);
     try {
       await api.post("/edge/opcua/config/reload", null);
-      showToast("OPC UA Stationen neu geladen!", "success");
+      showToast("OPC UA Connections neu geladen!", "success");
     } catch (err: any) {
       showToast("Neuladen fehlgeschlagen: " + err.message, "error");
     } finally {
@@ -233,17 +233,17 @@ export default function EdgePage() {
     }
   };
 
-  // Add/remove station config
-  const addStation = () => {
+  // Add/remove connection config
+  const addConnection = () => {
     const maxId = editingConfig.length > 0 ? Math.max(...editingConfig.map(s => s.id)) : 0;
-    setEditingConfig([...editingConfig, { id: maxId + 1, address: "", name: `Station ${maxId + 1}`, nodePrefix: "", stMesDbName: "stMES", dbProcessDataDbName: "dbProcessData", userName: "", password: "" }]);
+    setEditingConfig([...editingConfig, { id: maxId + 1, address: "", name: `Connection ${maxId + 1}`, nodePrefix: "", stMesDbName: "stMES", dbProcessDataDbName: "dbProcessData", userName: "", password: "" }]);
   };
 
-  const removeStation = (id: number) => {
+  const removeConnection = (id: number) => {
     setEditingConfig(editingConfig.filter(s => s.id !== id));
   };
 
-  const updateStationField = (id: number, field: keyof StationConfig, value: string | number) => {
+  const updateConnectionField = (id: number, field: keyof OpcUaConnectionConfig, value: string | number) => {
     setEditingConfig(editingConfig.map(s => {
       if (s.id === id) return { ...s, [field]: value };
       return s;
@@ -256,7 +256,7 @@ export default function EdgePage() {
         {/* Header */}
         <div className="bg-page-grey rounded-xl shadow-card border border-neutral-border p-5">
           <h1 className="text-[var(--text-3xl-size)] leading-tight font-bold text-neutral-black">Edge Gateway</h1>
-          <p className="text-sm text-neutral-mid mt-1">OPC UA Stations monitor + Config</p>
+          <p className="text-sm text-neutral-mid mt-1">OPC UA Connections monitor + Config</p>
         </div>
 
         {/* Tabs */}
@@ -338,7 +338,7 @@ export default function EdgePage() {
                     }`}>
                       <span className="text-neutral-mid">{new Date(evt.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
                       {" "}
-                      <span className="font-bold">Station {evt.stationId}</span>
+                      <span className="font-bold">Connection {evt.stationId}</span>
                       {" "}
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-uppercase font-bold ${
                         evt.type === "xStart" ? "bg-accent-lilac-bg text-brand-lilac" :
@@ -356,10 +356,10 @@ export default function EdgePage() {
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3">
               <button onClick={loadStations} style={{ fontSize: "var(--text-sm-size)" }} className="px-4 py-2 rounded-lg bg-white border border-neutral-border text-neutral-dark hover:bg-page-grey transition-colors font-medium disabled:opacity-50">
-                ↻ Stationen aktualisieren
+                ↻ Connections aktualisieren
               </button>
               <button onClick={handleReload} disabled={reloading} style={{ fontSize: "var(--text-sm-size)" }} className="px-4 py-2 rounded-lg bg-brand-primary text-white hover:opacity-90 transition-opacity font-medium disabled:opacity-50">
-                {reloading ? "⏳ Lade neu..." : "⟳ OPC UA Stationen neu laden"}
+                {reloading ? "⏳ Lade neu..." : "⟳ OPC UA Connections neu laden"}
               </button>
             </div>
           </div>
@@ -371,32 +371,32 @@ export default function EdgePage() {
             {/* Config Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 style={{ fontSize: "var(--text-xl-size)" }} className="leading-snug font-bold text-neutral-black">OPC UA Station Configuration</h2>
-                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid mt-1 max-w-2xl">Konfiguriere die Stationen, mit denen das Edge Gateway kommuniziert. Änderungen werden sofort gespeichert erfordern jedoch einen OPC UA Reload.</p>
+                <h2 style={{ fontSize: "var(--text-xl-size)" }} className="leading-snug font-bold text-neutral-black">OPC UA Connection Configuration</h2>
+                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid mt-1 max-w-2xl">Konfiguriere die Connections, mit denen das Edge Gateway kommuniziert. Änderungen werden sofort gespeichert erfordern jedoch einen OPC UA Reload.</p>
               </div>
-              <button onClick={addStation} style={{ fontSize: "var(--text-sm-size)" }} className="px-4 py-2 rounded-lg bg-status-success text-white hover:opacity-90 transition-opacity font-medium flex-shrink-0">
-                + Station hinzufügen
+              <button onClick={addConnection} style={{ fontSize: "var(--text-sm-size)" }} className="px-4 py-2 rounded-lg bg-status-success text-white hover:opacity-90 transition-opacity font-medium flex-shrink-0">
+                + Connection hinzufügen
               </button>
             </div>
 
             {/* Config Editor */}
             <div className="space-y-4">
-              {editingConfig.map((station) => (
-                <div key={station.id} className="bg-white rounded-xl shadow-card border border-neutral-border p-5 relative group">
-                  <button onClick={() => removeStation(station.id)} className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-status-error opacity-0 group-hover:opacity-100 transition-opacity bg-page-grey hover:bg-white" title="Station entfernen">✕</button>
+              {editingConfig.map((connection) => (
+                <div key={connection.id} className="bg-white rounded-xl shadow-card border border-neutral-border p-5 relative group">
+                  <button onClick={() => removeConnection(connection.id)} className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-status-error opacity-0 group-hover:opacity-100 transition-opacity bg-page-grey hover:bg-white" title="Connection entfernen">✕</button>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Name</label>
-                      <input value={station.name} onChange={e => updateStationField(station.id, "name", e.target.value)} style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.name} onChange={e => updateConnectionField(connection.id, "name", e.target.value)} style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Address (opc.tcp://...)</label>
-                      <input value={station.address} onChange={e => updateStationField(station.id, "address", e.target.value)} placeholder="opc.tcp://192.168.1.100:4840" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.address} onChange={e => updateConnectionField(connection.id, "address", e.target.value)} placeholder="opc.tcp://192.168.1.100:4840" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Zugeordnete Maschine</label>
-                      <select value={station.opcuaStationId ?? ""} onChange={e => updateStationField(station.id, "opcuaStationId", e.target.value || "")} style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors">
+                      <select value={connection.opcuaStationId ?? ""} onChange={e => updateConnectionField(connection.id, "opcuaStationId", e.target.value || "")} style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors">
                         <option value="">— Keine Maschine —</option>
                         {machines.map(m => (
                           <option key={m.id} value={m.opcua_station_id || ""}>
@@ -407,31 +407,31 @@ export default function EdgePage() {
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Node Prefix (optional)</label>
-                      <input value={station.nodePrefix} onChange={e => updateStationField(station.id, "nodePrefix", e.target.value)} placeholder="PLC1." style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.nodePrefix} onChange={e => updateConnectionField(connection.id, "nodePrefix", e.target.value)} placeholder="PLC1." style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">stMES DB Name</label>
-                      <input value={station.stMesDbName} onChange={e => updateStationField(station.id, "stMesDbName", e.target.value)} placeholder="stMES" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.stMesDbName} onChange={e => updateConnectionField(connection.id, "stMesDbName", e.target.value)} placeholder="stMES" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">dbProcessData DB Name</label>
-                      <input value={station.dbProcessDataDbName} onChange={e => updateStationField(station.id, "dbProcessDataDbName", e.target.value)} placeholder="DB151" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.dbProcessDataDbName} onChange={e => updateConnectionField(connection.id, "dbProcessDataDbName", e.target.value)} placeholder="DB151" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Username (optional)</label>
-                      <input value={station.userName} onChange={e => updateStationField(station.id, "userName", e.target.value)} placeholder="administrator" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.userName} onChange={e => updateConnectionField(connection.id, "userName", e.target.value)} placeholder="administrator" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                     <div>
                       <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Password (optional)</label>
-                      <input value={station.password} onChange={e => updateStationField(station.id, "password", e.target.value)} type="password" placeholder="••••••••" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
+                      <input value={connection.password} onChange={e => updateConnectionField(connection.id, "password", e.target.value)} type="password" placeholder="••••••••" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                     </div>
                   </div>
 
                   {/* Machine assignment badge */}
-                  {station.opcuaStationId && (
+                  {connection.opcuaStationId && (
                     <div className="mt-3 pt-3 border-t border-neutral-border">
                       <span style={{ fontSize: "var(--text-xs-size)" }} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-accent-lilac-bg text-brand-lilac font-medium">
-                        ⊡ Zugeordnete Maschine: #{station.opcuaStationId}
+                        ⊡ Zugeordnete Maschine: #{connection.opcuaStationId}
                       </span>
                     </div>
                   )}
@@ -442,7 +442,7 @@ export default function EdgePage() {
                     <div className="flex flex-wrap gap-2 font-mono text-[10px]">
                       {["xStart", "xBusy", "xAck", "iCarrierID"].map(field => (
                         <span key={field} className="px-2 py-1 bg-page-grey rounded border border-neutral-border text-brand-lilac">
-                          ns=4;s={station.dbProcessDataDbName || "DB151"}:{field}
+                          ns=4;s={connection.dbProcessDataDbName || "DB151"}:{field}
                         </span>
                       ))}
                     </div>
