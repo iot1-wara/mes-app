@@ -93,7 +93,7 @@ Pro Station-Block in Production Control:
 | xStart/xQryBusy xAck setzen | Nein | ✅ Auf jeder Station-Kachel | Nein |
 | Schritt vorwaerts | Nein | ✅ Pro Station | Nein |
 | Parameter (iPar1-4) editieren | Nein | ✅ Modal pro Station | ✅ Direkt in Tabelle |
-| Active Orders Übersicht | ✅ Hauptinhalt | Mini-Zähler | — |
+| Active Orders Übersicht | Mini-Zähler (KPI-Kachel) | Mini-Zähler | — |
 | Alarm-Ack | ✅ Als Footer-Akkordeon | Als Footer-Akkordeon | — |
 
 ### Workflow: Operator-Anmeldung → Workstation

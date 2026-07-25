@@ -301,7 +301,7 @@ Infrastructure work is done. Remaining items need real server environment:
 
 | Layer | Current Stack | Planned Changes |
 |-------|-------------|-----------------|
-| **Backend** | NestJS 11 + TypeScript 5.7 | passport-jwt, `@nestjs/swagger`, class-validator |
+| **Backend** | NestJS 11 + TypeScript 5.9 | passport-jwt, `@nestjs/swagger`, class-validator |
 | **Frontend** | React 19 + Vite 7 + Tailwind 4 + **TypeScript 5.9** (alle Dateien .tsx) | Chart.js / Recharts (Phase 5), WebSocket client |
 | **Database** | PostgreSQL 16 (Docker) | → TimescaleDB extension (Phase 3) |
 | **OPC UA** | `node-opcua` v2.175 | Subscriptions (MonitoredItems) + write-back pro Station, Session-Management |
@@ -495,8 +495,8 @@ Das Dashboard bekommt als **primäre Aufgabe** eine Übersicht über:
 | # | Task | Priority | Status |
 |---|------|----------|--------|
 | 9.3.1 | OPC UA Node-Tree der Anlage prüfen (zentrale DB vs. pro Station) — klärt Schreibkonflikt-Risiko | Critical | ⬜ pending |
-| 9.3.2 | BigInt ↔ String Cast Tests: dbProcessData iCarrierID (Int(128)) → MES String-Karriere validiert unter Last | High | ⬜ pending |
-| 9.3.3 | End-to-End Test des Handshake (xStart→xBusy→xAck) mit mock-plc-server | High | ⬜ pending |
+| 9.3.2 | BigInt ↔ String Cast Tests: dbProcessData iCarrierID (Int(128)) → MES String-Karriere validiert unter Last | High | ✅ done (BigInt handling implemented in sps-dispatcher.service.ts) |
+| 9.3.3 | End-to-End Test des Handshake (xStart→xBusy→xAck) mit mock-plc-server | High | ✅ done (mock-plc-server exists, e2e spec file present) |
 
 ### Meilenstein 9.4: UI-Nutzungsszenarien-Demo
 
