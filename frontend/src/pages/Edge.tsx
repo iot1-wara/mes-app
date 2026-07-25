@@ -65,16 +65,18 @@ export default function EdgePage() {
   const [nodeReaderStation, setNodeReaderStation] = useState<number>(1);
   const [nodeReaderResult, setNodeReaderResult] = useState<Record<string, any> | null>(null);
   const [liveValues, setLiveValues] = useState<Record<string, number>>({});
-  // MQTT Monitor state
+   // MQTT Monitor state
   const [allMqttMessages, setAllMqttMessages] = useState<any[]>([]);
-  const [orderMqttMessages, setOrderMqttMessages] = useState<MqttMessage[]>([]);
-  const [mqttConfig, setMqttConfig] = useState<{ connected: boolean; config?: { brokerUrl?: string; connected?: boolean } }>({ connected: false, config: { brokerUrl: 'mqtt://localhost:1883', connected: false } });
+  const [pendingOrders, setPendingOrders] = useState<MqttMessage[]>([]);
+  const [createdOrders, setCreatedOrders] = useState<{ orderId: string; name: string; payload: any; timestamp: string }[]>([]);
+  const createdKeysRef = useRef<Set<string>>(new Set());
+   const [mqttConfig, setMqttConfig] = useState<{ connected: boolean; config?: { brokerUrl?: string; connected?: boolean } , savedConfig?: { brokerUrl?: string; username?: string; password?: string } }>({ connected: false, config: { brokerUrl: 'mqtt://localhost:1883', connected: false }, savedConfig: {} });
   const [mqttBrokerUrl, setMqttBrokerUrl] = useState("mqtt://localhost:1883");
   const [mqttUsername, setMqttUsername] = useState("");
   const [mqttPassword, setMqttPassword] = useState("");
   const [mqttConnecting, setMqttConnecting] = useState(false);
   const [autoCreateOrder, setAutoCreateOrder] = useState(true);
-  const [lastCreatedOrderId, setLastCreatedOrderId] = useState<string | null>(null);
+  const autoCreateRef = useRef(autoCreateOrder);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Load stations status
@@ -103,7 +105,15 @@ export default function EdgePage() {
     } catch {}
   }, []);
 
-  const [showAutoCreate, setShowAutoCreate] = useState(true);
+   const loadMqttStatus = useCallback(async () => {
+     try {
+       const res: any = await api.get("/edge/mqtt/status");
+       if (res?.connected !== undefined) {
+         setMqttConfig({ connected: res.connected, config: { brokerUrl: res.config?.brokerUrl || mqttBrokerUrl, connected: res.connected }, savedConfig: { brokerUrl: res.savedConfig?.brokerUrl || mqttBrokerUrl, username: res.savedConfig?.username || "", password: "" } });
+       }
+     } catch {}
+   }, []);
+
 
   // Load MQTT broker config from file
   useEffect(() => {
@@ -112,17 +122,23 @@ export default function EdgePage() {
       try {
         const cfg = JSON.parse(globalThis.__saved_mqtt_config as string);
         if (cfg.brokerUrl) setMqttBrokerUrl(cfg.brokerUrl);
-        setShowAutoCreate(cfg.autoCreateOrder ?? true);
+        if (cfg.autoCreateOrder != null) setAutoCreateOrder(cfg.autoCreateOrder);
       } catch {}
     };
     loadSavedConfig();
   }, []);
 
-  useEffect(() => {
-    loadStations();
-    loadConfig();
-    loadMachines();
-  }, [loadStations, loadConfig, loadMachines]);
+   useEffect(() => {
+     loadStations();
+     loadConfig();
+     loadMachines();
+     loadMqttStatus();
+     // Load saved config fields into input fields
+     if (mqttConfig.savedConfig) {
+       if (mqttConfig.savedConfig.brokerUrl) setMqttBrokerUrl(mqttConfig.savedConfig.brokerUrl);
+       if (mqttConfig.savedConfig.username) setMqttUsername(mqttConfig.savedConfig.username);
+     }
+   }, [loadStations, loadConfig, loadMachines, loadMqttStatus]);
 
   // Polling for status updates
   useEffect(() => {
@@ -166,7 +182,12 @@ export default function EdgePage() {
         try {
           const msg = JSON.parse(e.data);
           if (msg.type === 'mqtt/status') {
-            setMqttConfig({ connected: msg.connected ?? false, config: { brokerUrl: msg.brokerUrl || mqttConfig.config?.brokerUrl, connected: msg.connected } });
+            setMqttConfig(prev => ({ ...prev, connected: msg.connected ?? false, config: { ...prev.config, brokerUrl: msg.brokerUrl || prev.config?.brokerUrl } }));
+            return;
+          }
+          if (msg.type === 'mqtt/auto-create') {
+            setAutoCreateOrder(msg.enabled);
+            autoCreateRef.current = msg.enabled;
             return;
           }
           if (msg.type?.startsWith('mqtt/') && msg.payload) {
@@ -176,14 +197,18 @@ export default function EdgePage() {
               timestamp: new Date(msg.timestamp || Date.now()).toISOString(),
             };
             if (mqttMsg.topic === "i4.0/production/orders") {
-              const idx = orderMqttMessages.length;
-              setOrderMqttMessages(prev => [...prev.slice(-200), mqttMsg]);
-              if (showAutoCreate && msg.payload?.bDeckelfarbe) {
+              const key = JSON.stringify(msg.payload);
+              setPendingOrders(prev => [...prev.slice(-200), mqttMsg]);
+              setAllMqttMessages(prev => [...prev.slice(-500), mqttMsg]);
+              
+              if (autoCreateRef.current && msg.payload?.bDeckelfarbe) {
                 try {
                   const p = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
                   const res = await api.post("/edge/mqtt/order/import", p);
                   if (res?.success && res.orderId) {
-                    setLastCreatedOrderId(res.orderId);
+                    createdKeysRef.current.add(key);
+                    setPendingOrders(prev => prev.filter(m => JSON.stringify(m.payload) !== key));
+                    setCreatedOrders(prev => [...prev, { orderId: res.orderId, name: res.orderName || res.orderId, payload: msg.payload, timestamp: new Date().toISOString() }]);
                     showToast(`Order angelegt: ${res.orderName || res.orderId}`, "success");
                   }
                 } catch {}
@@ -195,7 +220,7 @@ export default function EdgePage() {
       };
       return () => { mqttWs.close(); };
     } catch {}
-  }, [showAutoCreate]);
+  }, []);
 
   // Save config handler
   const handleSaveConfig = async () => {
@@ -478,97 +503,75 @@ export default function EdgePage() {
               <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${mqttConfig.connected ? "bg-status-success/20 text-status-success" : "bg-status-warning/20 text-status-warning"}`}>
                 {mqttConfig.connected ? "Verbunden" : "Nicht verbunden"}
               </span>
-              <span className="font-medium text-neutral-mid text-sm">Broker: {mqttConfig.config?.brokerUrl}</span>
-              {lastCreatedOrderId && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-status-success/20 text-status-success text-xs font-medium">
-                  ✓ Letzter Order: {lastCreatedOrderId.slice(0, 8)}...
-                </span>
-              )}
+               <span className="font-medium text-neutral-mid text-sm">Broker: {mqttConfig.config?.brokerUrl}</span>
             </div>
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 p-4 bg-white rounded-xl border border-neutral-border">
               <label className="inline-flex items-center gap-2 cursor-pointer" style={{ fontSize: "var(--text-sm-size)" }}>
-                <input type="checkbox" checked={showAutoCreate} onChange={e => setShowAutoCreate(e.target.checked)} className="w-4 h-4 rounded accent-brand-primary" />
+                <input type="checkbox" checked={autoCreateOrder} onChange={async e => {
+                  const checked = e.target.checked;
+                  autoCreateRef.current = checked;
+                  await api.post("/edge/mqtt/order/auto-create", { enabled: checked });
+                  setAutoCreateOrder(checked);
+                }} className="w-4 h-4 rounded accent-brand-primary" />
                 <span className="font-medium text-neutral-dark">Auto-Create Order bei MQTT Message</span>
               </label>
             </div>
 
-            {/* Manual Order */}
-            {orderMqttMessages.length > 0 && (
-              <>
-                <button onClick={() => {
-                  const msg = orderMqttMessages[0];
-                  (async () => {
-                    try {
-                      const p = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
-                      const res = await api.post("/edge/mqtt/order/import", p);
-                      if (res?.success) setLastCreatedOrderId(res.orderId);
-                    } catch {}
-                  })();
-                }} style={{ fontSize: "var(--text-sm-size)" }} className="px-5 py-2.5 rounded-lg bg-brand-primary text-white hover:opacity-90 transition-opacity font-medium">
-                  Manuelles Order-Erzeugen ({orderMqttMessages.length})
-                </button>
-                <button onClick={async () => {
-                  for (const msg of orderMqttMessages) {
-                    try {
-                      const p = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
-                      await api.post("/edge/mqtt/order/import", p);
-                    } catch {}
-                  }
-                }} style={{ fontSize: "var(--text-sm-size)" }} className="px-5 py-2.5 rounded-lg bg-white border border-brand-primary text-brand-primary hover:bg-brand-primary/10 transition-colors font-medium">
-                  Alle Orders anlegen
-                </button>
-              </>
-            )}
-
-            {/* All MQTT Messages */}
-            {allMqttMessages.length > 0 ? (
+            {/* Pending Orders */}
+            {pendingOrders.length > 0 ? (
               <div className="bg-white rounded-xl shadow-card border border-neutral-border p-5">
                 <h3 style={{ fontSize: "var(--text-lg-size)" }} className="leading-snug font-bold text-neutral-black mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 bg-status-success animate-pulse" />
-                  Alle MQTT Messages ({allMqttMessages.length})
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 bg-status-warning animate-pulse" />
+                  Offene Bestellungen ({pendingOrders.length})
                 </h3>
-                <div className="max-h-[500px] overflow-y-auto space-y-1 rounded-lg p-3 border border-neutral-border bg-page-grey">
-                  {allMqttMessages.slice().reverse().map((msg, i) => (
-                    <div key={i} className={`px-2 py-1.5 rounded ${msg.topic === "i4.0/production/orders" ? "bg-brand-lilac-bg/30 text-brand-lilac" : ""}`}>
-                      <span className="text-neutral-mid">{new Date(msg.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                      {" "}
-                      <span className="font-bold text-brand-primary">{msg.topic}</span>
-                      {" → "}
-                      <span className="text-neutral-dark">{typeof msg.payload === "string" ? msg.payload : JSON.stringify(msg.payload)}</span>
+                <div className="max-h-[400px] overflow-y-auto space-y-1 rounded-lg p-3 border border-neutral-border bg-page-grey">
+                  {pendingOrders.map((msg, i) => (
+                    <div key={i} className="px-2 py-1.5 rounded bg-status-warning-bg/30 flex justify-between items-center gap-2">
+                      <span className="text-neutral-dark text-xs truncate">{JSON.stringify(msg.payload)}</span>
+                      {!autoCreateOrder && (
+                        <button onClick={async () => {
+                          try {
+                            const p = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;
+                            const res = await api.post("/edge/mqtt/order/import", p);
+                            if (res?.success && res.orderId) {
+                              setPendingOrders(prev => prev.filter((m, j) => j !== i));
+                              setCreatedOrders(prev => [...prev, { orderId: res.orderId, name: res.orderName || res.orderId, payload: msg.payload, timestamp: new Date().toISOString() }]);
+                            }
+                          } catch {}
+                        }} className="px-3 py-1 rounded text-xs bg-brand-primary text-white hover:opacity-90 font-medium shrink-0">
+                          Erstellen
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
+            ) : !mqttConfig.connected ? (
+              <div className="rounded-xl border-2 border-dashed border-status-error/30 p-8 flex items-center justify-center bg-status-error-bg">
+                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-status-error font-medium">Broker nicht verbunden — keine Orders möglich</p>
+              </div>
             ) : (
               <div className="rounded-xl border-2 border-dashed border-neutral-border p-8 flex items-center justify-center bg-page-grey">
-                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid">Warte auf MQTT Messages von i4.0/production/orders...</p>
+                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid">{autoCreateOrder ? 'Orders werden automatisch angelegt…' : 'Warte auf MQTT Messages von i4.0/production/orders…'}</p>
               </div>
             )}
 
-            {/* Order Messages */}
-            {orderMqttMessages.length > 0 ? (
+            {/* Created Orders */}
+            {createdOrders.length > 0 && (
               <div className="bg-white rounded-xl shadow-card border border-neutral-border p-5">
                 <h3 style={{ fontSize: "var(--text-lg-size)" }} className="leading-snug font-bold text-neutral-black mb-3 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full flex-shrink-0 bg-status-success animate-pulse" />
-                  Webshop Bestellungen ({orderMqttMessages.length})
+                  Erstellte Orders ({createdOrders.length})
                 </h3>
-                <div className="max-h-[500px] overflow-y-auto space-y-1 rounded-lg p-3 border border-neutral-border bg-page-grey">
-                  {orderMqttMessages.slice().reverse().map((msg, i) => (
-                    <div key={i} className="px-2 py-1.5 rounded bg-brand-lilac-bg/30">
-                      <span className="text-neutral-mid">{new Date(msg.timestamp).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                      {" "}
-                      <span className="font-bold text-brand-primary">{msg.topic}</span>
-                      {" → "}
-                      <span className="text-neutral-dark mt-1 block mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs">{JSON.stringify(msg.payload, null, 2)}</span>
+                <div className="max-h-[400px] overflow-y-auto space-y-1 rounded-lg p-3 border border-neutral-border bg-page-grey">
+                  {createdOrders.map((order, i) => (
+                    <div key={i} className="px-2 py-1.5 rounded bg-status-success-bg/30 text-status-success text-xs">
+                      ✓ {order.name || order.orderId.slice(0, 8)} — {new Date(order.timestamp).toLocaleTimeString("de-DE")}
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border-2 border-dashed border-neutral-border p-8 flex items-center justify-center bg-page-grey">
-                <p style={{ fontSize: "var(--text-sm-size)" }} className="text-neutral-mid">Keine Webshop Bestellungen empfangen.</p>
               </div>
             )}
           </div>
@@ -577,29 +580,61 @@ export default function EdgePage() {
         {/* ===== MQTT CONFIG TAB ===== */}
         {tab === "mqtt-config" && (
           <div className="space-y-6">
+            {/* Status Header */}
+            <div className="bg-white rounded-xl shadow-card border border-neutral-border p-5 flex items-center gap-3">
+              <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${mqttConfig.connected ? "bg-status-success/20 text-status-success" : "bg-status-error/20 text-status-error"}`}>
+                {mqttConfig.connected ? "● Verbunden" : "○ Nicht verbunden"}
+              </span>
+              <span className="font-medium text-neutral-mid text-sm">Broker: {mqttConfig.config?.brokerUrl}</span>
+            </div>
+
             <div className="bg-white rounded-xl shadow-card border border-neutral-border p-5">
               <h2 style={{ fontSize: "var(--text-xl-size)" }} className="leading-snug font-bold text-neutral-black mb-4">MQTT Broker Configuration</h2>
+
               <div className="space-y-4 max-w-lg">
                 <div>
                   <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Broker URL</label>
-                  <input value={mqttBrokerUrl} onChange={e => setMqttBrokerUrl(e.target.value)} placeholder="mqtt://broker.emqx.io" className="w-full border border-neutral-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none" />
+                  <input value={mqttConfig.savedConfig?.brokerUrl || mqttBrokerUrl} onChange={e => setMqttBrokerUrl(e.target.value)} placeholder="mqtt://broker.emqx.io" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                 </div>
                 <div>
                   <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Username (optional)</label>
-                  <input value={mqttUsername} onChange={e => setMqttUsername(e.target.value)} placeholder="optional" className="w-full border border-neutral-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none" />
+                  <input value={mqttConfig.savedConfig?.username || mqttUsername} onChange={e => setMqttUsername(e.target.value)} placeholder="optional" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                 </div>
                 <div>
                   <label style={{ fontSize: "var(--text-xs-size)" }} className="block font-medium text-neutral-mid mb-1.5">Password (optional)</label>
-                  <input type="password" value={mqttPassword} onChange={e => setMqttPassword(e.target.value)} placeholder="••••••••" className="w-full border border-neutral-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none" />
+                  <input type="password" value={mqttPassword} onChange={e => setMqttPassword(e.target.value)} placeholder="••••••••" style={{ fontSize: "var(--text-sm-size)" }} className="w-full bg-white border border-neutral-border rounded-lg px-3 py-2 text-sm placeholder:text-neutral-mid focus:ring-1 focus:ring-brand-primary/50 focus:border-brand-primary outline-none transition-colors" />
                 </div>
-                <button onClick={async () => {
-                  try {
-                    await api.post("/edge/mqtt/connect", { brokerUrl: mqttBrokerUrl, username: mqttUsername || undefined, password: mqttPassword || undefined });
-                    showToast("MQTT Broker connect gesendet", "success");
-                  } catch {}
-                }} disabled={mqttConnecting} style={{ fontSize: "var(--text-sm-size)" }} className={`px-5 py-2.5 rounded-lg text-white font-medium transition-colors ${mqttConnecting ? "bg-gray-400" : "bg-status-success hover:opacity-90"}`}>
-                  {mqttConnecting ? "Verbinde..." : (mqttConfig.connected ? "Broker trennen" : "Broker verbinden")}
-                </button>
+
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-neutral-border">
+                  <button onClick={async () => {
+                    try {
+                      await api.post("/edge/mqtt/connect", { brokerUrl: mqttConfig.savedConfig?.brokerUrl || mqttBrokerUrl, username: mqttConfig.savedConfig?.username || mqttUsername || undefined, password: mqttPassword || undefined });
+                      showToast("MQTT Broker connect gesendet", "success");
+                      // Reload status after connect
+                      const status = await api.get("/edge/mqtt/status");
+                      if (status?.connected !== undefined) {
+                        setMqttConfig({ connected: status.connected, config: { brokerUrl: mqttConfig.savedConfig?.brokerUrl || mqttBrokerUrl, connected: status.connected }, savedConfig: status.savedConfig });
+                      }
+                    } catch {}
+                  }} disabled={mqttConnecting} style={{ fontSize: "var(--text-sm-size)" }} className={`px-5 py-2.5 rounded-lg text-white font-medium transition-colors ${mqttConnecting ? "bg-gray-400" : "bg-status-success hover:opacity-90"}`}>
+                    {mqttConnecting ? "Verbinde..." : (mqttConfig.connected ? "Broker trennen" : "Broker verbinden")}
+                  </button>
+                  <button onClick={async () => {
+                    try {
+                      await api.post("/edge/mqtt/config", { brokerUrl: mqttConfig.savedConfig?.brokerUrl || mqttBrokerUrl, username: mqttConfig.savedConfig?.username || mqttUsername || undefined, password: mqttPassword || undefined });
+                      // Reload status to refresh saved config in input fields
+                      const status = await api.get("/edge/mqtt/status");
+                      if (status?.connected !== undefined) {
+                        setMqttConfig({ connected: status.connected, config: { brokerUrl: status.config?.brokerUrl || mqttBrokerUrl, connected: status.connected }, savedConfig: status.savedConfig });
+                        if (status.savedConfig?.brokerUrl) setMqttBrokerUrl(status.savedConfig.brokerUrl);
+                        if (status.savedConfig?.username) setMqttUsername(status.savedConfig.username);
+                      }
+                      showToast("Konfiguration gespeichert!", "success");
+                    } catch {}
+                  }} style={{ fontSize: "var(--text-sm-size)" }} className="px-5 py-2.5 rounded-lg bg-white border border-neutral-border text-neutral-dark hover:bg-page-grey transition-colors font-medium">
+                    Konfiguration speichern
+                  </button>
+                </div>
               </div>
             </div>
           </div>

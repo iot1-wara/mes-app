@@ -329,6 +329,7 @@ export class MqttGatewayService implements OnModuleInit {
     return {
       connected: this.isConnected(),
       config: this.currentStatus,
+      savedConfig: { brokerUrl: this.currentStatus.brokerUrl, username: this.currentStatus.username },
     };
   }
 }
