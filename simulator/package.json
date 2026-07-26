@@ -1,0 +1,17 @@
+{
+  "name": "s7-opcua-simulator",
+  "version": "1.0.0",
+  "description": "Siemens S7-1500 OPC UA simulator for MES testing",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-opcua": "^2.175.2",
+    "tsx": "^4.23.1"
+  }
+}
