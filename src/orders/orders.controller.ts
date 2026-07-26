@@ -44,6 +44,9 @@ export class OrdersController {
   @Post(':id/resume')
   resumeOrder(@Param('id') id: string) { return this.ordersService.changeStatus(id, 'in_progress'); }
 
+  @Post(':id/release')
+  releaseOrder(@Param('id') id: string) { return this.ordersService.changeStatus(id, 'released'); }
+
   @Delete(':id')
   deleteOrder(@Param('id') id: string) { return this.ordersService.remove(id); }
 

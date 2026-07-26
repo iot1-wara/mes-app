@@ -29,7 +29,7 @@ export class CreateOrderDto {
 
 export class UpdateOrderDto {
   @IsOptional()
-  status?: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
+  status?: 'pending' | 'released' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
 
   @IsOptional()
   completed_quantity?: number;

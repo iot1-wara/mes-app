@@ -5,10 +5,12 @@ import type { FindOptionsWhere, FindOptionsRelations, FindOptionsSelect } from '
 import { OrderEntity } from './order.entity';
 import { CarrierEntity } from './carrier.entity';
 import { MaterialEntity } from './material.entity';
+import { SpsDispatcherService } from './sps-dispatcher.service';
 import type { CreateOrderDto, UpdateOrderDto } from './order.dto';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ['in_progress', 'cancelled'],
+  pending: ['released', 'cancelled'],
+  released: ['in_progress', 'on_hold', 'cancelled'],
   in_progress: ['completed', 'on_hold', 'cancelled'],
   on_hold: ['in_progress'],
   completed: [],
@@ -20,6 +22,9 @@ export class OrdersService {
   constructor(
     @InjectRepository(OrderEntity)
     private readonly ordersRepo: Repository<OrderEntity>,
+    private readonly spsDispatcherService: SpsDispatcherService,
+    @InjectRepository(CarrierEntity)
+    private readonly carriersRepo: Repository<CarrierEntity>,
   ) {}
 
   async create(dto: CreateOrderDto): Promise<OrderEntity> {
@@ -69,11 +74,10 @@ export class OrdersService {
   async update(id: string, dto: UpdateOrderDto): Promise<OrderEntity> {
     const order = await this.findOne(id);
     
-    if (dto.status && dto.status !== order.status) {
+    if (dto.status && dto.status !== 'released' && dto.status !== order.status) {
       this.validateTransition(order.status, dto.status);
       
-      // Set SPS flags during transitions
-      if (dto.status === 'in_progress') {
+      if (order.status === 'in_progress') {
         order.start_time = new Date();
         order.sps_flag_udi_on = true;
       } else if (dto.status === 'completed') {
@@ -91,14 +95,67 @@ export class OrdersService {
       }
     }
 
+    if (dto.status === 'released') {
+      // Pre-release: create carrier for SPS dispatch
+      const carrier = await this.carriersRepo.findOne({ where: { order_id: order.id } });
+      if (!carrier) {
+        await this.carriersRepo.create({
+          name: `WERKST-${order.id.substring(0, 6).toUpperCase()}`,
+          order_id: order.id,
+          iResourceID: parseInt(order.machine_id?.split('-').pop() || '0', 10),
+          status: 'idle' as CarrierEntity['status'],
+        });
+      }
+    }
+
+    if (dto.status === 'in_progress' && dto.status !== order.status) {
+      // Trigger SPS handshake dispatch on start
+      const carrier = await this.carriersRepo.findOne({ where: { order_id: order.id } });
+      if (carrier) {
+        try {
+          await this.spsDispatcherService.dispatch(carrier.name, carrier.iResourceID ?? undefined);
+        } catch {}
+      } else {
+        try {
+          await this.spsDispatcherService.dispatch(order.id, undefined);
+        } catch {}
+      }
+    }
+
     Object.assign(order, dto);
     return this.ordersRepo.save(order);
   }
 
   async changeStatus(id: string, newStatus: string): Promise<OrderEntity> {
     const order = await this.findOne(id);
-    this.validateTransition(order.status, newStatus);
-    
+
+    if (newStatus === 'released') {
+      // Pre-release: create carrier for SPS dispatch
+      const carrier = await this.carriersRepo.findOne({ where: { order_id: id } });
+      if (!carrier) {
+        await this.carriersRepo.create({
+          name: `WERKST-${order.id.substring(0, 6).toUpperCase()}`,
+          order_id: id,
+          iResourceID: parseInt(order.machine_id?.split('-').pop() || '0', 10),
+          status: 'idle' as CarrierEntity['status'],
+        });
+      }
+    }
+
+    if (newStatus === 'in_progress') {
+      // Trigger SPS handshake dispatch on start
+      const carrier = await this.carriersRepo.findOne({ where: { order_id: id } });
+      if (carrier) {
+        try {
+          await this.spsDispatcherService.dispatch(carrier.name, carrier.iResourceID ?? undefined);
+        } catch {}
+      } else {
+        try {
+          await this.spsDispatcherService.dispatch(order.id, undefined);
+        } catch {}
+      }
+    }
+
     if (newStatus === 'in_progress') {
       order.start_time = new Date();
       order.sps_flag_udi_on = true;

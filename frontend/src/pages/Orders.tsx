@@ -57,7 +57,11 @@ export default function OrdersPage() {
   };
 
   function handleStatusChange(id: string, newStatus: string) {
-    api.post(`/orders/${id}/${newStatus}`, {}).then(() => refreshOrders()).catch(() => {});
+    if (newStatus === 'released') {
+      api.post(`/orders/${id}/release`, {}).then(() => refreshOrders()).catch(() => {});
+    } else {
+      api.post(`/orders/${id}/${newStatus}`, {}).then(() => refreshOrders()).catch(() => {});
+    }
   }
 
   async function createCarrier(orderId: string) {
