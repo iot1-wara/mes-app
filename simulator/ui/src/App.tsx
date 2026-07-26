@@ -3,6 +3,8 @@ import StationCard from './components/StationCard'
 import type { SimulatorStation } from './types'
 import { STATIONS } from './types'
 
+const API_BASE = 'http://localhost:4841' // HTTP REST API port (configurable via .env)
+
 export default function App() {
   const [liveStations, setLiveStations] = useState<SimulatorStation[]>([])
   const [backendReady, setBackendReady] = useState(false)
@@ -11,7 +13,7 @@ export default function App() {
   // Poll state endpoint to get live station data from simulator
   const fetchAllStates = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:4841/api/state')
+      const res = await fetch(`${API_BASE}/api/state`)
       if (!res.ok) throw new Error('Backend not reachable')
       setBackendReady(true)
       const data: Record<number, any> = await res.json()

@@ -164,11 +164,16 @@ class Simulator extends EventEmitter {
       if (p[0]==="api"&&p[1]==="command") {
         let b=""; req.on("data",c=>{b+=String(c)});req.on("end",()=>{
           try { const d=JSON.parse(b); const cmd=d.command||""; const val=d.value??1;
-            if(p[2]){ const port=parseInt(p[2],10); setStateFor(port,s=>{(s as any)[cmd]=val});
+            if(p[2]){ 
+              const port=parseInt(p[2],10);
+              setStateFor(port,(s:any)=>{(s as any)[cmd]=val});
+              const refs = sim.getStateRefs(port);
+              if (refs && cmd in refs) (refs as any)[cmd] = val;
               console.log("[HTTP] "+cmd+"="+val+" on port "+port);
               res.writeHead(200,{"Content-Type":"application/json"});res.end(JSON.stringify({ok:true,port,cmd,val})); }
-            else { let n=0;for(const pp of sim.getAllPorts()){setStateFor(pp,s=>{(s as any)[cmd]=val});n++;}
-              res.writeHead(200,{"Content-Type":"application/json"});res.end(JSON.stringify({ok:true,stationCount:n,cmd,val})); }
+            else { 
+              let n=0;for(const pp of sim.getAllPorts()){setStateFor(pp,s=>{(s as any)[cmd]=val});const r=sim.getStateRefs(pp);if(r&&cmd in r)(r as any)[cmd]=val;n++;}
+                res.writeHead(200,{"Content-Type":"application/json"});res.end(JSON.stringify({ok:true,stationCount:n,cmd,val})); }
           } catch(e){res.writeHead(400,{"Content-Type":"application/json"});res.end(JSON.stringify({ok:false,error:String(e)}));} });
         return; }
       res.writeHead(404);res.end();

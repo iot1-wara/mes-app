@@ -9,6 +9,7 @@ const initialEmptyState: StateRefs = {
 }
 
 export default function StationCard({ station }: { station: SimulatorStation }) {
+  const API = 'http://localhost:4841/api'
   const [state, setState] = useState(station.name)
   const [current, setCurrent] = useState<StateRefs>({ ...initialEmptyState })
   const [loading, setLoading] = useState(false)
@@ -17,7 +18,7 @@ export default function StationCard({ station }: { station: SimulatorStation }) 
   const fetchState = useCallback(async () => {
     try {
       setError(null)
-      const res = await fetch(`http://localhost:4840/api/state/${station.port}`)
+      const res = await fetch(`${API}/state/${station.port}`)
       if (!res.ok) return
       const data = await res.json()
       setState(data.state || 'Idle')
@@ -46,7 +47,7 @@ export default function StationCard({ station }: { station: SimulatorStation }) 
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`http://localhost:4840/api/command/${station.port}`, {
+    const res = await fetch(`${API}/command/${station.port}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: cmd, value: 1 }),
